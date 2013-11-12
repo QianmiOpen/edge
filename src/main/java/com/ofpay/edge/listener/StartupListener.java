@@ -35,9 +35,9 @@ public class StartupListener implements ServletContextListener {
         String filters = servletContext.getInitParameter("filters");
 
         // 加载dubbo接口
-        InterfaceLoader.loadAllBean(context, filters.split(","));
-        InterfaceLoader.loadAllMethod(InterfaceLoader.allBeanMap);
-        InterfaceLoader.loadAllMethodMapParamDesc(InterfaceLoader.allMethodMap);
+//        InterfaceLoader.loadAllBean(context, filters.split(","));
+//        InterfaceLoader.loadAllMethod(InterfaceLoader.allBeanMap);
+//        InterfaceLoader.loadAllMethodMapParamDesc(InterfaceLoader.allMethodMap);
     }
 
     /*
