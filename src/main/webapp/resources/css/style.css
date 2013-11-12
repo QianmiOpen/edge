@@ -50,7 +50,7 @@
     border-right:1px solid #d0d0d0;
 	border-top:1px solid #eee;
 	border-left:1px solid #eee;
-    background: #f9f9f9 url(../resources/images/default/grid/grid3-hrow.gif) repeat-x 0 top;
+    background: #f9f9f9 url(../images/default/grid/grid3-hrow.gif) repeat-x 0 top;
 	padding:3px;
 }
 .body-wrap .msource-header {
@@ -156,7 +156,7 @@
 .body-wrap .member-table td.micon{
 	width:16px;
 	padding:0px;
-    background: #f9f9f9 url(../resources/images/expand-bg.gif) repeat-y top right;
+    background: #f9f9f9 url(../images/expand-bg.gif) repeat-y top right;
     border-right:1px solid #d0d0d0;
 }
 .body-wrap .member-table td.micon a {
@@ -186,7 +186,7 @@
     border:1px solid #d0d0d0;
 }
 .member-table tr.inherited td.msource{
-	background-image: url(../resources/images/inherited.gif);
+	background-image: url(../images/inherited.gif);
 	background-position:2px 4px;
 	background-repeat: no-repeat;
     padding-left:18px;
@@ -292,7 +292,7 @@ pre code i,pre code i b,pre code i em{
 	margin: 0;
 	font-size: 11px;
 	line-height:18px !important;
-    background:transparent url(../resources/images/block-bottom.gif) no-repeat left bottom;
+    background:transparent url(../images/block-bottom.gif) no-repeat left bottom;
     padding:0 8px 5px!important;
 }
 
@@ -302,19 +302,19 @@ pre code i,pre code i b,pre code i em{
 }
 
 .expandable .micon a {
-    background: transparent url(../resources/images/member-collapsed.gif) no-repeat 5px 6px;
+    background: transparent url(../images/member-collapsed.gif) no-repeat 5px 6px;
     cursor:pointer;
 }
 
 .expandable td.micon:hover a {
-    background: transparent url(../resources/images/member-hover.gif) no-repeat 5px 6px;
+    background: transparent url(../images/member-hover.gif) no-repeat 5px 6px;
     cursor:pointer;
 }
 .body-wrap .member-table .expanded td.micon{
-	background: #f9f9f9 url(../resources/images/expand-bg-over.gif) repeat-y top right;
+	background: #f9f9f9 url(../images/expand-bg-over.gif) repeat-y top right;
 }
 .body-wrap .member-table .expanded td.micon a {
-    background: transparent url(../resources/images/member-expanded.gif) no-repeat 5px 6px;
+    background: transparent url(../images/member-expanded.gif) no-repeat 5px 6px;
     cursor:pointer;
 }
 
@@ -349,7 +349,7 @@ pre code i,pre code i b,pre code i em{
 }
 
 .full-details .body-wrap .member-table .expanded td.micon{
-	background: #f9f9f9 url(../resources/images/expand-bg.gif) repeat-y top right;
+	background: #f9f9f9 url(../images/expand-bg.gif) repeat-y top right;
 }
 
 div.hr {

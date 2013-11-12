@@ -10,6 +10,8 @@ package com.ofpay.edge.bean;
 import java.io.Serializable;
 import java.util.List;
 
+import org.springframework.util.StringUtils;
+
 /**
  * <p>
  * JSONTreeNode
@@ -268,6 +270,21 @@ public class JSONTreeNode implements Serializable {
      */
     public void setIsClass(boolean isClass) {
         this.isClass = isClass;
+    }
+
+    /**
+     * 如果两个JSONTreeNode的id相等，则认为是同一个JSONTreeNode
+     * @see java.lang.Object#equals(java.lang.Object)
+     */
+    @Override
+    public boolean equals(Object obj) {
+
+        if (obj == null || !(obj instanceof JSONTreeNode) || !StringUtils.hasText(id)) {
+            return false;
+        }
+
+        JSONTreeNode another = (JSONTreeNode) obj;
+        return id.equals(another.id);
     }
 
 }

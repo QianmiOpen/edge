@@ -34,7 +34,7 @@ html, body {
 }
 #header{
    border:0 none;
-   background:#1E4176 url(../resources/images/hd-bg.gif) repeat-x 0 0;
+   background:#1E4176 url(../images/hd-bg.gif) repeat-x 0 0;
    padding-top:3px;
    padding-left:3px;
 }
@@ -54,7 +54,7 @@ html, body {
 
 .loading-indicator {
     font-size:11px;
-    background-image:url('../resources/images/default/grid/loading.gif');
+    background-image:url('../images/default/grid/loading.gif');
     background-repeat: no-repeat;
     background-position:top left;
     padding-left:20px;
@@ -68,18 +68,18 @@ html, body {
     top:35%;
     left:43%;
     color:#444;
-    background-image:url(../resources/images/default/shared/large-loading.gif);
+    background-image:url(../images/default/shared/large-loading.gif);
     background-repeat: no-repeat;
     background-position:left 5px;
     padding:10px 10px 10px 38px;
 	text-align:left;
 }
 a#welcome-link{
-	background:#fff url(../resources/images/docs.gif) no-repeat 0px 0px;
+	background:#fff url(../images/docs.gif) no-repeat 0px 0px;
 	padding-left:18px;
 }
 a#help-forums{
-	background:#fff url(../resources/images/forum.gif) no-repeat 16px 0px;
+	background:#fff url(../images/forum.gif) no-repeat 16px 0px;
 	padding-left:34px;
 	display:block
 }
@@ -236,52 +236,52 @@ a:hover {
 }
 
 #doc-body .x-tab-panel-body {
-    background:#fff url(../resources/images/default/form/text-bg.gif) repeat-x 0 0;
+    background:#fff url(../images/default/form/text-bg.gif) repeat-x 0 0;
 }
 #doc-body .x-panel-body, #doc-body .body-wrap {
     background:transparent !important;
 }
 .icon-cls {
-    background-image: url(../resources/images/class.gif) !important;
+    background-image: url(../images/class.gif) !important;
 }
 .icon-event {
-    background-image: url(../resources/images/event.gif) !important;
+    background-image: url(../images/event.gif) !important;
 }
 .icon-config {
-    background-image: url(../resources/images/config.gif) !important;
+    background-image: url(../images/config.gif) !important;
 }
 .icon-prop {
-    background-image: url(../resources/images/prop.gif) !important;
+    background-image: url(../images/prop.gif) !important;
 }
 .icon-method {
-    background-image: url(../resources/images/method.gif) !important;
+    background-image: url(../images/method.gif) !important;
 }
 .icon-cmp {
-    background-image: url(../resources/images/cmp.gif) !important;
+    background-image: url(../images/cmp.gif) !important;
 }
 .icon-pkg {
-    background-image: url(../resources/images/pkg.gif) !important;
+    background-image: url(../images/pkg.gif) !important;
 }
 .icon-fav {
-    background-image: url(../resources/images/fav.gif) !important;
+    background-image: url(../images/fav.gif) !important;
 }
 .icon-static {
-    background-image: url(../resources/images/static.gif) !important;
+    background-image: url(../images/static.gif) !important;
 }
 .icon-docs {
-    background-image: url(../resources/images/docs.gif) !important;
+    background-image: url(../images/docs.gif) !important;
 }
 .icon-expand-all {
-    background-image: url(../resources/images/expand-all.gif) !important;
+    background-image: url(../images/expand-all.gif) !important;
 }
 .icon-collapse-all {
-    background-image: url(../resources/images/collapse-all.gif) !important;
+    background-image: url(../images/collapse-all.gif) !important;
 }
 .icon-expand-members {
-    background-image: url(../resources/images/expand-members.gif) !important;
+    background-image: url(../images/expand-members.gif) !important;
 }
 .icon-hide-inherited {
-    background-image: url(../resources/images/hide-inherited.gif) !important;
+    background-image: url(../images/hide-inherited.gif) !important;
 }
 
 #legend li {

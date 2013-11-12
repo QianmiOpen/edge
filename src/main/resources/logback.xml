@@ -16,6 +16,6 @@
     <root level="WARN">
         <appender-ref ref="STDOUT" />
     </root>
-    <logger name="com.ofpay" level="INFO" />
+    <logger name="com.ofpay" level="DEBUG" />
     <logger name="org.springframework" level="WARN" />
 </configuration>
