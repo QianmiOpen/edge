@@ -8,7 +8,7 @@
         ">
     <dubbo:registry protocol="${ofpc.dubbo.registry.protocol}"
         address="${ofpc.dubbo.registry.address}" 
-        id="ofpc-dubbo-registry" register="false" timeout="${ofpc.dubbo.registry.timeout}" file="${ofpc.dubbo.registry.file}"/>
+        id="ofpc-dubbo-registry" register="false" check="false" timeout="${ofpc.dubbo.registry.timeout}" file="${ofpc.dubbo.registry.file}"/>
     
     <dubbo:reference id="ProductInfoService" interface="com.ofpay.product.service.ProductInfoService"
         check="false" registry="ofpc-dubbo-registry" />
@@ -24,5 +24,11 @@
         check="false" registry="ofpc-dubbo-registry" />
     <dubbo:reference id="AreaInfoConvertService" interface="com.ofpay.product.service.AreaInfoConvertService"
         check="false" registry="ofpc-dubbo-registry" />
-        
+
+
+    <dubbo:reference id="registryService" interface="com.alibaba.dubbo.registry.RegistryService" check="false" />
+
+    <bean id="notifyMe" class="com.ofpay.edge.listener.NotifyMe" >
+        <property name="registryService" ref="registryService"/>
+    </bean>
 </beans>
