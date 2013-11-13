@@ -37,22 +37,22 @@ public class InterfaceExecutor {
 
     private static ApplicationConfig application = null;
 
+    private static ReferenceConfig<Object> reference = null;
+
     public static void init(RegistryConfig registry, ApplicationConfig application) {
         InterfaceExecutor.registry = registry;
         InterfaceExecutor.application = application;
+        // 引用远程服务
+        reference = new ReferenceConfig<Object>(); // 此实例很重，封装了与注册中心的连接以及与提供者的连接，请自行缓存，否则可能造成内存和连接泄漏
+        reference.setApplication(application);
+        reference.setRegistry(registry); // 多个注册中心可以用setRegistries()
+        reference.setCheck(false);
     }
 
     public static Object getServiceBean(ServiceBean serviceBean) {
-
-        // 引用远程服务
-        ReferenceConfig<Object> reference = new ReferenceConfig<Object>(); // 此实例很重，封装了与注册中心的连接以及与提供者的连接，请自行缓存，否则可能造成内存和连接泄漏
-        reference.setApplication(application);
-        reference.setRegistry(registry); // 多个注册中心可以用setRegistries()
         reference.setInterface(serviceBean.getClazzName());
-        reference.setCheck(false);
         // reference.setUrl(url); TODO 后续可以指定调用服务
         reference.setVersion(serviceBean.getVersion());
-
         // 和本地bean一样使用xxxService
         return reference.get(); // 注意：此代理对象内部封装了所有通讯细节，对象较重，请缓存复用
     }
