@@ -10,7 +10,9 @@ import javax.servlet.ServletContextListener;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
-import com.ofpay.edge.InterfaceLoader;
+import com.alibaba.dubbo.config.ApplicationConfig;
+import com.alibaba.dubbo.config.RegistryConfig;
+import com.ofpay.edge.InterfaceExecutor;
 
 /**
  * <p>
@@ -31,13 +33,10 @@ public class StartupListener implements ServletContextListener {
     public void contextInitialized(ServletContextEvent sce) {
         ServletContext servletContext = sce.getServletContext();
         WebApplicationContext context = WebApplicationContextUtils.getWebApplicationContext(servletContext);
+        RegistryConfig registry = context.getBean("default-dubbo-registry", RegistryConfig.class);
+        ApplicationConfig application = context.getBean("default-dubbo-application", ApplicationConfig.class);
 
-        String filters = servletContext.getInitParameter("filters");
-
-        // 加载dubbo接口
-//        InterfaceLoader.loadAllBean(context, filters.split(","));
-//        InterfaceLoader.loadAllMethod(InterfaceLoader.allBeanMap);
-//        InterfaceLoader.loadAllMethodMapParamDesc(InterfaceLoader.allMethodMap);
+        InterfaceExecutor.init(registry, application);
     }
 
     /*

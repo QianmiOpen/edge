@@ -8,6 +8,10 @@
        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
        http://code.alibabatech.com/schema/dubbo http://code.alibabatech.com/schema/dubbo/dubbo.xsd   
        ">
-    <dubbo:application name="${dubbo.application.name}" />
-
+    <dubbo:application id="default-dubbo-application" name="${dubbo.application.name}" />
+     
+    <dubbo:registry protocol="${default.dubbo.registry.protocol}"
+        address="${default.dubbo.registry.address}" 
+        id="default-dubbo-registry" register="false" check="false" timeout="${default.dubbo.registry.timeout}" file="${default.dubbo.registry.file}"/>
+        
 </beans>
