@@ -4,6 +4,8 @@
 package com.ofpay.edge.bean;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>
@@ -29,6 +31,8 @@ public class ServiceBean implements Serializable {
     private String revision;
 
     private int port;
+
+    private List<String> methods;
 
     /**
      * @return the clazzName
@@ -98,6 +102,20 @@ public class ServiceBean implements Serializable {
      */
     public void setPort(int port) {
         this.port = port;
+    }
+
+    /**
+     * @return the methods
+     */
+    public List<String> getMethods() {
+        return methods == null ? new ArrayList<String>(0) : methods;
+    }
+
+    /**
+     * @param methods the methods to set
+     */
+    public void setMethods(List<String> methods) {
+        this.methods = methods;
     }
 
 }

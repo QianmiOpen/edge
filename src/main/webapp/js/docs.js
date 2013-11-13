@@ -48,11 +48,10 @@ ApiPanel = function() {
 };
 
 Ext.extend(ApiPanel, Ext.tree.TreePanel, {
-    selectClass : function(cls) {
-	if (cls) {
+    selectClass : function(fullPath) {
+	if (fullPath) {
 	    // xxx.xxx.xxx
-	    var parent = cls.slice(0, cls.lastIndexOf('.'));
-	    this.selectPath('/root/apidocs/' + parent + '/' + cls);
+	    this.selectPath('/root/' + fullPath);
 	}
     }
 });
@@ -64,9 +63,26 @@ DocPanel = Ext.extend(Ext.Panel, {
     margins : '35 5 5 0',
     containerScroll : true,
     initComponent : function() {
-	var ps = this.cclass.split('.');
-	this.title = ps[ps.length - 1];
-	this.tabTip = ps;
+	this.tabTip = this.cclass;
+
+	var serviceURLCombo = new Ext.form.ComboBox({
+	    fieldLabel : 'ServiceURL', // UI标签名称
+	    name : 'serviceUrl', // 作为form提交时传送的参数名
+	    allowBlank : true, // 是否允许为空
+	    mode : 'local', // 数据模式, local为本地模式, 如果不设置,就显示不停的加载中...
+	    readOnly : true, // 是否只读
+	    triggerAction : 'all', // 显示所有下列数.必须指定为'all'
+	    anchor : '90%',
+	    emptyText : '', // 没有默认值时,显示的字符串
+	    store : new Ext.data.SimpleStore({ // 填充的数据
+		fields : [ 'text', 'value' ],
+		data : this.serviceUrls
+	    }),
+	    value : '', // 设置当前选中的值, 也可用作初始化时的默认值, 默认为空
+	    valueField : 'value', // 传送的值
+	    displayField : 'text' // UI列表显示的文本
+	});
+
 	var formPanel = new Ext.form.FormPanel(
 		{
 		    labelWidth : 75,
@@ -83,10 +99,10 @@ DocPanel = Ext.extend(Ext.Panel, {
 		    items : [ {
 			xtype : 'textfield',
 			fieldLabel : 'Method',
-			value : this.cclass,
+			value : this.serviceKey + "@" + this.title,
 			readOnly : true,
 			name : 'methodName'
-		    }, {
+		    }, serviceURLCombo, {
 			fieldLabel : 'Params',
 			name : 'params',
 			xtype : 'textarea',
@@ -201,7 +217,7 @@ Ext.extend(MainPanel, Ext.TabPanel, {
 	MainPanel.superclass.initEvents.call(this);
     },
 
-    loadClass : function(href, cls) {
+    loadClass : function(href, cls, fullPath, serviceKey) {
 	var id = 'docs-' + cls;
 	var tab = this.getComponent(id);
 	if (tab) {
@@ -212,15 +228,22 @@ Ext.extend(MainPanel, Ext.TabPanel, {
 		url : 'getParamDesc.do',
 		method : 'post',
 		params : {
+		    serviceKey : serviceKey,
 		    methodName : cls
 		},
 		success : function(response, options) {
 		    var o = Ext.util.JSON.decode(response.responseText);
-		    var defParam = js_beautify(o.msg, 4, ' ');
+		    var defParam = o.paramDesc ? js_beautify(o.paramDesc, 4,
+			    ' ') : "";
+		    var serviceUrls = o.serviceUrls;
+
 		    var p = me.add(new DocPanel({
 			id : id,
-			cclass : cls,
+			cclass : fullPath,
 			defParam : defParam,
+			serviceKey : serviceKey,
+			serviceUrls : serviceUrls,
+			title : cls,
 			// autoLoad: autoLoad,
 			iconCls : Docs.icons[cls]
 		    }));
@@ -229,7 +252,9 @@ Ext.extend(MainPanel, Ext.TabPanel, {
 		failure : function() {
 		    var p = me.add(new DocPanel({
 			id : id,
-			cclass : cls,
+			cclass : fullPath,
+			serviceKey : serviceKey,
+			title : cls,
 			// autoLoad: autoLoad,
 			iconCls : Docs.icons[cls]
 		    }));
@@ -251,7 +276,8 @@ Ext.onReady(function() {
     api.on('click', function(node, e) {
 	if (node.isLeaf()) {
 	    e.stopEvent();
-	    mainPanel.loadClass(node.attributes.href, node.id);
+	    mainPanel.loadClass(node.attributes.href, node.id,
+		    node.attributes.fullPath, node.attributes.serviceKey);
 	}
     });
 

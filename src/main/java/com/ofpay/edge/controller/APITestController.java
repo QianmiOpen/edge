@@ -3,7 +3,9 @@
  */
 package com.ofpay.edge.controller;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,10 +14,12 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.alibaba.dubbo.common.URL;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONException;
 import com.ofpay.edge.InterfaceExecutor;
@@ -36,6 +40,85 @@ import com.ofpay.edge.bean.JSONTreeNode;
 public class APITestController {
     private static final Logger logger = LoggerFactory.getLogger(APITestController.class);
 
+    private JSONTreeNode findChild(JSONTreeNode treeNode, String id) {
+        if (treeNode == null) {
+            return null;
+        }
+
+        List<String> list = Arrays.asList(id.split("\\."));
+        JSONTreeNode childNode = null;
+        for (String shortId : list) {
+            childNode = treeNode.getChild(shortId);
+            if (childNode == null) {
+                return null;
+            } else {
+                treeNode = childNode;
+            }
+        }
+
+        return childNode;
+    }
+
+    private void addPackageNode(JSONTreeNode parentNode, String packageName) {
+
+        String[] packageArr = packageName.split("\\.", 2);
+
+        String nodeName = packageArr[0];
+        String nodeId = nodeName;
+        String fullPath = parentNode.getFullPath() + "/" + nodeId;
+
+        JSONTreeNode childNode = parentNode.getChild(nodeId); // 根据ID获取node是否存在
+
+        if (null == childNode) { // 若不存则创建node，并添加到children中
+            childNode = new JSONTreeNode();
+            childNode = new JSONTreeNode();
+            childNode.setId(nodeId);
+            childNode.setText(nodeName);
+            childNode.setCls("package");
+            childNode.setIconCls("icon-pkg");
+            childNode.setSingleClickExpand(true);
+            childNode.setFullPath(fullPath);
+            parentNode.addChildren(childNode);
+        }
+
+        if (packageArr.length > 1) {
+            addPackageNode(childNode, packageArr[1]);
+        }
+    }
+
+    private JSONTreeNode addClassNode(JSONTreeNode packageNode, String className) {
+        JSONTreeNode classNode = new JSONTreeNode();
+        classNode = new JSONTreeNode();
+        classNode = new JSONTreeNode();
+        classNode.setId(className);
+        classNode.setText(className);
+        classNode.setCls("package");
+        classNode.setIconCls("icon-cls");
+        classNode.setSingleClickExpand(true);
+        classNode.setFullPath(packageNode.getFullPath() + "/" + className);
+
+        packageNode.addChildren(classNode);
+
+        return classNode;
+    }
+
+    private void addMethodNode(JSONTreeNode classNode, String[] methods, String serviceKey) {
+
+        for (String methodName : methods) {
+            JSONTreeNode methodNode = new JSONTreeNode();
+            methodNode.setId(methodName);
+            methodNode.setText(methodName);
+            methodNode.setFullPath(classNode.getFullPath() + "/" + methodName);
+            methodNode.setCls("cls");
+            methodNode.setIconCls("icon-method");
+            methodNode.setLeaf(true);
+            methodNode.setIsClass(true);
+            methodNode.setServiceKey(serviceKey);
+
+            classNode.addChildren(methodNode);
+        }
+    }
+
     /**
      * 获取接口JsonTree
      * @return json数组
@@ -44,48 +127,78 @@ public class APITestController {
     public @ResponseBody
     String getApiList() {
 
-        Set<String> beanNameSet = InterfaceLoader.allBeanMap.keySet();
-        Set<String> methodNameSet = InterfaceLoader.allMethodMap.keySet();
+        Set<String> serviceKeySet = InterfaceLoader.REGISTRY_PROVIDER_CACHE.keySet();
 
-        JSONTreeNode parentNode = new JSONTreeNode();
-        parentNode.setId("apidocs");
-        parentNode.setText("API Lists");
-        parentNode.setIconCls("icon-docs");
-        parentNode.setSingleClickExpand(true);
+        JSONTreeNode apidocsNode = new JSONTreeNode();
+        apidocsNode.setId("apidocs");
+        apidocsNode.setText("API Lists");
+        apidocsNode.setIconCls("icon-docs");
+        apidocsNode.setFullPath("apidocs");
+        apidocsNode.setSingleClickExpand(true);
 
-        List<JSONTreeNode> classList = new ArrayList<JSONTreeNode>();
-        for (String beanName : beanNameSet) {
+        // beanName格式：group/com.xxx.xxxProvider:version
+        for (String serviceKey : serviceKeySet) {
 
-            JSONTreeNode classNode = new JSONTreeNode();
-            classNode.setId(beanName);
-            classNode.setText(beanName);
-            classNode.setCls("package");
-            classNode.setIconCls("icon-pkg");
-            classNode.setSingleClickExpand(true);
+            URL url = InterfaceLoader.getRandomRegisterCacheURL(serviceKey);
 
-            List<JSONTreeNode> methodList = new ArrayList<JSONTreeNode>();
-            for (String methodName : methodNameSet) {
+            String group = "";
+            String className = "";
+            String version = "";
 
-                if (methodName.startsWith(beanName)) {
-                    JSONTreeNode methodNode = new JSONTreeNode();
-                    methodNode.setId(methodName);
-                    int len = methodName.split("\\.").length;
-                    methodNode.setText(methodName.split("\\.")[len - 1]);
-                    methodNode.setCls("cls");
-                    methodNode.setIconCls("icon-cls");
-                    methodNode.setLeaf(true);
-                    methodNode.setIsClass(true);
-                    methodList.add(methodNode);
+            String strArr1[] = serviceKey.split("/");
+            if (strArr1.length > 1) {
+                group = strArr1[0];
+                className = strArr1[1];
+            } else {
+                className = strArr1[0];
+            }
+
+            String[] strArr2 = className.split(":");
+            if (strArr2.length > 1) {
+                className = strArr2[0];
+                version = strArr2[1];
+            }
+
+            String packageName = className.substring(0, className.lastIndexOf("."));
+            String beanName = className.substring(className.lastIndexOf(".") + 1);
+
+            if (StringUtils.hasText(version)) {
+                beanName = beanName + ":" + version;
+            }
+
+            if (StringUtils.hasText(group)) {
+                JSONTreeNode groupNode = new JSONTreeNode();
+                groupNode.setId(group);
+                groupNode.setText(group);
+                groupNode.setCls("package");
+                groupNode.setIconCls("icon-cmp"); // icon-cmp
+                groupNode.setSingleClickExpand(true);
+
+                this.addPackageNode(groupNode, packageName);
+
+                JSONTreeNode packageNode = this.findChild(groupNode, packageName);
+
+                if (null != packageNode) {
+                    JSONTreeNode classNode = this.addClassNode(packageNode, beanName);
+                    this.addMethodNode(classNode, url.getParameter("methods").split(","), serviceKey);
+                }
+
+                apidocsNode.addChildren(groupNode);
+            } else {
+
+                this.addPackageNode(apidocsNode, packageName);
+                JSONTreeNode packageNode = this.findChild(apidocsNode, packageName);
+
+                if (null != packageNode) {
+                    JSONTreeNode classNode = this.addClassNode(packageNode, beanName);
+                    this.addMethodNode(classNode, url.getParameter("methods").split(","), serviceKey);
                 }
             }
-            classNode.setChildren(methodList);
-            classList.add(classNode);
+
         }
 
-        parentNode.setChildren(classList);
-
         List<JSONTreeNode> parentList = new ArrayList<JSONTreeNode>();
-        parentList.add(parentNode);
+        parentList.add(apidocsNode);
 
         String json = JSON.toJSONString(parentList);
         logger.debug("{}", json);
@@ -101,16 +214,29 @@ public class APITestController {
      */
     @RequestMapping("executeTest.do")
     public @ResponseBody
-    String executeTest(@RequestParam String methodName, @RequestParam String params) {
+    String executeTest(@RequestParam String methodName, @RequestParam String params,
+            @RequestParam(required = false) String serviceUrl) {
 
         Map<String, Object> result = new HashMap<String, Object>();
 
         String msg = "";
         try {
-            int idx = methodName.lastIndexOf(".");
-            String cls = methodName.substring(0, idx);
-            String mth = methodName.substring(idx + 1);
-            msg = InterfaceExecutor.execute(cls, mth, JSON.parseArray(params));
+            String arr[] = methodName.split("@");
+            String serviceKey = arr[0];
+            String mth = arr[1];
+
+            Object serviceBean = InterfaceLoader.getServiceBean(serviceKey, serviceUrl);
+            if (serviceBean == null) {
+                msg = "找不到服务Bean";
+            } else {
+                Method serviceMethod = InterfaceLoader.getServiceMethod(serviceBean, mth);
+                if (serviceMethod == null) {
+                    msg = "找不到服务Method";
+                } else {
+                    msg = InterfaceExecutor.execute(serviceBean, serviceMethod, JSON.parseArray(params));
+                }
+            }
+
         } catch (JSONException e) {
             msg = "参数格式错误;";
         } catch (Exception e) {
@@ -127,17 +253,26 @@ public class APITestController {
 
     /**
      * 获取接口参数描述
-     * @param methodName 接口名称 (xxxProvider.xxx)
+     * @param serviceKey 接口名称 (xxxProvider.xxx)
      * @return 接口参数的Json描述
      */
     @RequestMapping("getParamDesc.do")
     public @ResponseBody
-    String getParamDesc(@RequestParam String methodName) {
+    String getParamDesc(@RequestParam String serviceKey, @RequestParam String methodName) {
 
         Map<String, Object> result = new HashMap<String, Object>();
 
         result.put("success", true);
-        result.put("msg", InterfaceLoader.allMethodMapParamDesc.get(methodName));
+        result.put("paramDesc", InterfaceLoader.getParamDesc(serviceKey, methodName));
+
+        String[] serviceUrls = InterfaceLoader.getServiceUrl(serviceKey);
+        String[][] displayUrls = new String[serviceUrls.length][2];
+        for (int i = 0; i < serviceUrls.length; i++) {
+            displayUrls[i][0] = serviceUrls[i];
+            displayUrls[i][1] = serviceUrls[i];
+        }
+
+        result.put("serviceUrls", displayUrls);
 
         String json = JSON.toJSONString(result);
         logger.debug("{}", json);

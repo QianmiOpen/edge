@@ -5,26 +5,27 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.URL;
+import com.alibaba.dubbo.common.utils.CollectionUtils;
 import com.alibaba.dubbo.common.utils.NetUtils;
 import com.alibaba.dubbo.common.utils.StringUtils;
+import com.alibaba.dubbo.config.ApplicationConfig;
+import com.alibaba.dubbo.config.RegistryConfig;
 import com.alibaba.dubbo.registry.NotifyListener;
 import com.alibaba.dubbo.registry.RegistryService;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.ofpay.edge.InterfaceExecutor;
 import com.ofpay.edge.InterfaceLoader;
 import com.ofpay.edge.bean.ServiceBean;
 import com.ofpay.edge.util.Tool;
@@ -36,29 +37,29 @@ import com.ofpay.edge.util.Tool;
  * Time: 下午8:56
  * To change this template use File | Settings | File Templates.
  */
-@Component
-public class NotifyMe implements InitializingBean, DisposableBean, NotifyListener {
+public class NotifyMe implements InitializingBean, DisposableBean, NotifyListener, ApplicationContextAware {
 
-    private static final URL SUBSCRIBE = new URL(Constants.ADMIN_PROTOCOL, NetUtils.getLocalHost(), 0, "",
-            Constants.INTERFACE_KEY, Constants.ANY_VALUE, Constants.GROUP_KEY, Constants.ANY_VALUE,
-            Constants.VERSION_KEY, Constants.ANY_VALUE, Constants.CLASSIFIER_KEY, Constants.ANY_VALUE,
-            Constants.CATEGORY_KEY, Constants.PROVIDERS_CATEGORY, Constants.ENABLED_KEY, Constants.ENABLED_KEY,
-            Constants.CHECK_KEY, String.valueOf(false));
+    private static final String[] DEFAULT_SUBSCRIBE_PARAMS = new String[] { Constants.INTERFACE_KEY,
+            Constants.ANY_VALUE, Constants.GROUP_KEY, Constants.ANY_VALUE, Constants.VERSION_KEY, Constants.ANY_VALUE,
+            Constants.CLASSIFIER_KEY, Constants.ANY_VALUE, Constants.CATEGORY_KEY, Constants.PROVIDERS_CATEGORY,
+            Constants.ENABLED_KEY, Constants.ENABLED_KEY, Constants.CHECK_KEY, String.valueOf(false) };
+
+    private URL subscribe = null;
+
+    private Map<String, String> subcribeParams = CollectionUtils.toStringMap(DEFAULT_SUBSCRIBE_PARAMS);
+
+    private String urlFilterRegex;
+
+    private ApplicationContext appContext;
 
     private static final AtomicLong ID = new AtomicLong();
 
     private static Logger logger = LoggerFactory.getLogger(NotifyMe.class);
 
-    private final ConcurrentMap<String, ConcurrentMap<String, Map<Long, URL>>> registryCache = new ConcurrentHashMap<String, ConcurrentMap<String, Map<Long, URL>>>();
+    // private final ConcurrentMap<String, Map<Long, URL>> registryProvoderCache = new ConcurrentHashMap<String,
+    // Map<Long, URL>>();
 
-    @Autowired
     private RegistryService registryService;
-
-    // private ApplicationContext applicationContext;
-
-    public ConcurrentMap<String, ConcurrentMap<String, Map<Long, URL>>> getRegistryCache() {
-        return registryCache;
-    }
 
     public RegistryService getRegistryService() {
         return registryService;
@@ -69,68 +70,70 @@ public class NotifyMe implements InitializingBean, DisposableBean, NotifyListene
     }
 
     public void destroy() throws Exception {
-        registryService.unsubscribe(SUBSCRIBE, this);
+        registryService.unsubscribe(subscribe, this);
     }
 
     public void afterPropertiesSet() throws Exception {
         logger.info("Init NotifyMe...");
-        registryService.subscribe(SUBSCRIBE, this);
+
+        RegistryConfig registry = appContext.getBean("default-dubbo-registry", RegistryConfig.class);
+        ApplicationConfig application = appContext.getBean("default-dubbo-application", ApplicationConfig.class);
+
+        InterfaceLoader.init(registry, application);
+
+        subscribe = new URL(Constants.ADMIN_PROTOCOL, NetUtils.getLocalHost(), 0, "", subcribeParams);
+        registryService.subscribe(subscribe, this);
+
     }
 
     public void notify(List<URL> urls) {
         if (urls == null || urls.isEmpty()) {
             return;
         }
-        final Map<String, Map<String, Map<Long, URL>>> categories = new HashMap<String, Map<String, Map<Long, URL>>>();
+
         for (URL url : urls) {
-            String category = url.getParameter(Constants.CATEGORY_KEY, Constants.PROVIDERS_CATEGORY);
-            if (Constants.EMPTY_PROTOCOL.equalsIgnoreCase(url.getProtocol())) { // 注意：empty协议的group和version为*
-                ConcurrentMap<String, Map<Long, URL>> services = registryCache.get(category);
-                if (services != null) {
+            String clazzName = url.getPath();
+            if (Pattern.matches(urlFilterRegex, clazzName)) { // 过滤非关注的URL
+
+                try {
+                    Class.forName(clazzName); // 忽略上下文中不存在class
+                } catch (ClassNotFoundException e) {
+                    logger.warn("can not found bean {} in context", clazzName);
+                    continue;
+                }
+
+                if (Constants.EMPTY_PROTOCOL.equalsIgnoreCase(url.getProtocol())) { // 注意：empty协议的group和version为*
                     String group = url.getParameter(Constants.GROUP_KEY);
                     String version = url.getParameter(Constants.VERSION_KEY);
+
                     // 注意：empty协议的group和version为*
                     if (!Constants.ANY_VALUE.equals(group) && !Constants.ANY_VALUE.equals(version)) {
-                        services.remove(url.getServiceKey());
+                        InterfaceLoader.REGISTRY_PROVIDER_CACHE.remove(url.getServiceKey());
                     } else {
-                        for (Map.Entry<String, Map<Long, URL>> serviceEntry : services.entrySet()) {
+                        for (Map.Entry<String, Map<Long, URL>> serviceEntry : InterfaceLoader.REGISTRY_PROVIDER_CACHE
+                                .entrySet()) {
                             String service = serviceEntry.getKey();
                             if (Tool.getInterface(service).equals(url.getServiceInterface())
                                     && (Constants.ANY_VALUE.equals(group) || StringUtils.isEquals(group,
                                             Tool.getGroup(service)))
                                     && (Constants.ANY_VALUE.equals(version) || StringUtils.isEquals(version,
                                             Tool.getVersion(service)))) {
-                                services.remove(service);
+                                InterfaceLoader.REGISTRY_PROVIDER_CACHE.remove(service);
                             }
                         }
                     }
+                } else {
+                    String service = url.getServiceKey();
+                    // initContext(url);
+                    Map<Long, URL> ids = InterfaceLoader.REGISTRY_PROVIDER_CACHE.get(service);
+                    if (ids == null) {
+                        ids = new HashMap<Long, URL>();
+                        // 提前占位，确保并发无问题
+                        InterfaceLoader.REGISTRY_PROVIDER_CACHE.put(service, ids);
+                    }
+                    ids.put(ID.incrementAndGet(), url);
                 }
-            } else {
-                Map<String, Map<Long, URL>> services = categories.get(category);
-                if (services == null) {
-                    services = new HashMap<String, Map<Long, URL>>();
-                    categories.put(category, services);
-                }
-                String service = url.getServiceKey();
-                initContext(url);
-                Map<Long, URL> ids = services.get(service);
-                if (ids == null) {
-                    ids = new HashMap<Long, URL>();
-                    // 提前占位，确保并发无问题
-                    services.put(service, ids);
-                }
-                ids.put(ID.incrementAndGet(), url);
             }
-
-        }
-        for (Map.Entry<String, Map<String, Map<Long, URL>>> categoryEntry : categories.entrySet()) {
-            String category = categoryEntry.getKey();
-            ConcurrentMap<String, Map<Long, URL>> services = registryCache.get(category);
-            if (services == null) {
-                services = new ConcurrentHashMap<String, Map<Long, URL>>();
-                registryCache.put(category, services);
-            }
-            services.putAll(categoryEntry.getValue());
         }
     }
 
@@ -147,16 +150,16 @@ public class NotifyMe implements InitializingBean, DisposableBean, NotifyListene
         serviceBean.setPort(port);
         serviceBean.setRevision(revision);
         serviceBean.setVersion(version);
-
         List<String> methodNames = Arrays.asList(url.getParameter("methods").split(","));
+        serviceBean.setMethods(methodNames);
 
         try {
             Class<?> clazz = Class.forName(clazzName);
-            Object l = InterfaceExecutor.getServiceBean(serviceBean);
+            // Object l = InterfaceExecutor.getServiceBean(serviceBean);
 
             logger.info("got {} in registry !!!!", clazzName);
             String beanName = clazzName.substring(clazzName.lastIndexOf(".") + 1);
-            InterfaceLoader.allBeanMap.put(beanName, l);
+            InterfaceLoader.allBeanMap.put(beanName, serviceBean);
 
             Method[] methods = clazz.getDeclaredMethods();
             for (Method method : methods) {
@@ -201,5 +204,37 @@ public class NotifyMe implements InitializingBean, DisposableBean, NotifyListene
         } catch (Exception e) {
             logger.warn("can not found bean {} in context", clazzName);
         }
+    }
+
+    /**
+     * @return the subcribeParams
+     */
+    public Map<String, String> getSubcribeParams() {
+        return subcribeParams;
+    }
+
+    /**
+     * @param subcribeParams the subcribeParams to set
+     */
+    public void setSubcribeParams(Map<String, String> subcribeParams) {
+        this.subcribeParams = subcribeParams;
+    }
+
+    /**
+     * @return the urlFilterRegex
+     */
+    public String getUrlFilterRegex() {
+        return urlFilterRegex;
+    }
+
+    /**
+     * @param urlFilterRegex the urlFilterRegex to set
+     */
+    public void setUrlFilterRegex(String urlFilterRegex) {
+        this.urlFilterRegex = urlFilterRegex;
+    }
+
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        this.appContext = applicationContext;
     }
 }

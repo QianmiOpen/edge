@@ -8,6 +8,7 @@
 package com.ofpay.edge.bean;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.util.StringUtils;
@@ -49,6 +50,31 @@ public class JSONTreeNode implements Serializable {
     private boolean isClass;
 
     private List<JSONTreeNode> children;
+
+    private String fullPath;
+
+    private String serviceKey;
+
+    public JSONTreeNode getChild(String id) {
+        if (null != children) {
+            for (JSONTreeNode node : children) {
+                if (node.id.equals(id)) {
+                    return node;
+                }
+            }
+        }
+        return null;
+    }
+
+    public void addChildren(JSONTreeNode node) {
+        if (children == null) {
+            children = new ArrayList<JSONTreeNode>();
+        }
+
+        if (!children.contains(node)) {
+            children.add(node);
+        }
+    }
 
     /**
      * <p>
@@ -285,6 +311,34 @@ public class JSONTreeNode implements Serializable {
 
         JSONTreeNode another = (JSONTreeNode) obj;
         return id.equals(another.id);
+    }
+
+    /**
+     * @return the fullPath
+     */
+    public String getFullPath() {
+        return fullPath;
+    }
+
+    /**
+     * @param fullPath the fullPath to set
+     */
+    public void setFullPath(String fullPath) {
+        this.fullPath = fullPath;
+    }
+
+    /**
+     * @return the serviceKey
+     */
+    public String getServiceKey() {
+        return serviceKey;
+    }
+
+    /**
+     * @param serviceKey the serviceKey to set
+     */
+    public void setServiceKey(String serviceKey) {
+        this.serviceKey = serviceKey;
     }
 
 }

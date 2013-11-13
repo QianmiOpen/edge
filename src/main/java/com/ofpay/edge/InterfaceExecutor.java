@@ -12,14 +12,10 @@ import org.apache.commons.beanutils.ConvertUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.alibaba.dubbo.config.ApplicationConfig;
-import com.alibaba.dubbo.config.ReferenceConfig;
-import com.alibaba.dubbo.config.RegistryConfig;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.ofpay.edge.bean.ServiceBean;
 
 /**
  * <p>
@@ -33,29 +29,6 @@ import com.ofpay.edge.bean.ServiceBean;
 public class InterfaceExecutor {
     private static Logger log = LoggerFactory.getLogger(InterfaceExecutor.class);
 
-    private static RegistryConfig registry = null;
-
-    private static ApplicationConfig application = null;
-
-    public static void init(RegistryConfig registry, ApplicationConfig application) {
-        InterfaceExecutor.registry = registry;
-        InterfaceExecutor.application = application;
-
-    }
-
-    public static Object getServiceBean(ServiceBean serviceBean) {
-        // 引用远程服务
-        ReferenceConfig<Object> reference = new ReferenceConfig<Object>(); // 此实例很重，封装了与注册中心的连接以及与提供者的连接，请自行缓存，否则可能造成内存和连接泄漏
-        reference.setApplication(application);
-        reference.setRegistry(registry); // 多个注册中心可以用setRegistries()
-        reference.setCheck(false);
-        reference.setInterface(serviceBean.getClazzName());
-        // reference.setUrl(url); TODO 后续可以指定调用服务
-        reference.setVersion(serviceBean.getVersion());
-        // 和本地bean一样使用xxxService
-        return reference.get(); // 注意：此代理对象内部封装了所有通讯细节，对象较重，请缓存复用
-    }
-
     /**
      * 接口执行方法
      * @param intfName 接口名，根据此名字获取对应的bean对象
@@ -63,16 +36,8 @@ public class InterfaceExecutor {
      * @param inputParamArray 方法入参信息，采用Json描述
      * @return 调用结果
      */
-    public static String execute(String intfName, String methodName, JSONArray inputParamArray) {
+    public static String execute(Object target, Method method, JSONArray inputParamArray) {
         String result = null;
-
-        Object target = InterfaceLoader.allBeanMap.get(intfName);
-        Method method = InterfaceLoader.allMethodMap.get(intfName + "." + methodName);
-
-        if (null == target || null == method) {
-            log.warn("未找到{}.{}接口", new Object[] { intfName, methodName });
-            return "未找到此接口";
-        }
 
         Class<?>[] paramTypes = method.getParameterTypes();
 
@@ -82,8 +47,8 @@ public class InterfaceExecutor {
             if (paramTypes != null && paramTypes.length > 0) {
 
                 if (inputParamArray == null || paramTypes.length != inputParamArray.size()) {
-                    log.warn("调用{}.{}接口参数值与参数个数不匹配, paramList:{}",
-                            new Object[] { intfName, methodName, inputParamArray });
+                    log.warn("调用{}.{}接口参数值与参数个数不匹配, paramList:{}", new Object[] { target.getClass(), method.getName(),
+                            inputParamArray });
                     return "参数错误，出入的参数个数与接口不匹配";
                 }
 
@@ -108,7 +73,8 @@ public class InterfaceExecutor {
 
         } catch (Exception e) {
             result = "调用接口异常\r\n" + getStackTrace(e);
-            log.error("{}.{}接口调用发生异常, paramMap:{}", new Object[] { intfName, methodName, inputParamArray, e });
+            log.error("{}.{}接口调用发生异常, paramMap:{}", new Object[] { target.getClass(), method.getName(),
+                    inputParamArray, e });
         }
 
         return result;
