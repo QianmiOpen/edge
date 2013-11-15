@@ -51,7 +51,9 @@ public class JSONTreeNode implements Serializable {
 
     private List<JSONTreeNode> children;
 
-    private String fullPath;
+    private String fullPath; // 当前node的完整路径
+
+    private String fullText; // 当前node的完整text
 
     private String serviceKey;
 
@@ -339,6 +341,20 @@ public class JSONTreeNode implements Serializable {
      */
     public void setServiceKey(String serviceKey) {
         this.serviceKey = serviceKey;
+    }
+
+    /**
+     * @return the fullText
+     */
+    public String getFullText() {
+        return fullText;
+    }
+
+    /**
+     * @param fullText the fullText to set
+     */
+    public void setFullText(String fullText) {
+        this.fullText = fullText;
     }
 
 }

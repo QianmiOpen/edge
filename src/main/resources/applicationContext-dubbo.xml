@@ -12,6 +12,6 @@
      
     <dubbo:registry protocol="${default.dubbo.registry.protocol}"
         address="${default.dubbo.registry.address}" 
-        id="default-dubbo-registry" register="false" check="false" timeout="${default.dubbo.registry.timeout}" file="${default.dubbo.registry.file}"/>
+        id="default-dubbo-registry" register="false" check="false" timeout="${default.dubbo.registry.timeout}" file="${default.dubbo.registry.filestore}"/>
         
 </beans>

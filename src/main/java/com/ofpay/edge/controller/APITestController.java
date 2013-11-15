@@ -40,15 +40,24 @@ import com.ofpay.edge.bean.JSONTreeNode;
 public class APITestController {
     private static final Logger logger = LoggerFactory.getLogger(APITestController.class);
 
-    private JSONTreeNode findChild(JSONTreeNode treeNode, String id) {
+    private static final String FOLDER_SPLIT = "/";
+
+    /**
+     * 根据ID查找子节点
+     * @param treeNode
+     * @param path 子节点ID,支持沿深度查询。例如：com/xxx/abc; 直接返回abc节点
+     * @return
+     */
+    private JSONTreeNode findChild(JSONTreeNode treeNode, String path) {
         if (treeNode == null) {
             return null;
         }
 
-        List<String> list = Arrays.asList(id.split("\\."));
+        List<String> list = Arrays.asList(path.split(FOLDER_SPLIT));
         JSONTreeNode childNode = null;
-        for (String shortId : list) {
-            childNode = treeNode.getChild(shortId);
+        for (String shortPath : list) {
+
+            childNode = treeNode.getChild(treeNode.getId() + shortPath);
             if (childNode == null) {
                 return null;
             } else {
@@ -59,13 +68,25 @@ public class APITestController {
         return childNode;
     }
 
-    private void addPackageNode(JSONTreeNode parentNode, String packageName) {
+    /**
+     * 创建package节点, 支持沿深度创建<br>
+     * 例如：com/xxx/abc将创建三层节点: <br>
+     * &nbsp;&nbsp;&nbsp;&nbsp;parentNode <br>
+     * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|--com <br>
+     * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|--xxx <br>
+     * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|--abc <br>
+     * @param parentNode 父节点
+     * @param packageName 包名，支持深度创建；
+     * @param groupPrefix 组前缀
+     */
+    private void addPackageNode(JSONTreeNode parentNode, String packageName, String groupPrefix, boolean isGroup) {
 
-        String[] packageArr = packageName.split("\\.", 2);
+        String[] packageArr = packageName.split(FOLDER_SPLIT, 2);
 
         String nodeName = packageArr[0];
-        String nodeId = nodeName;
-        String fullPath = parentNode.getFullPath() + "/" + nodeId;
+        String nodeId = parentNode.getId() + nodeName;
+        String fullPath = parentNode.getFullPath() + FOLDER_SPLIT + nodeId;
+        String fullText = parentNode.getFullText() + FOLDER_SPLIT + nodeName;
 
         JSONTreeNode childNode = parentNode.getChild(nodeId); // 根据ID获取node是否存在
 
@@ -73,42 +94,41 @@ public class APITestController {
             childNode = new JSONTreeNode();
             childNode = new JSONTreeNode();
             childNode.setId(nodeId);
+            // childNode.setId(groupPrefix + "_" + nodeId);
             childNode.setText(nodeName);
             childNode.setCls("package");
-            childNode.setIconCls("icon-pkg");
+            if (isGroup) {
+                childNode.setIconCls("icon-cmp");
+            } else {
+                childNode.setIconCls("icon-pkg");
+            }
             childNode.setSingleClickExpand(true);
             childNode.setFullPath(fullPath);
+            childNode.setFullText(fullText);
             parentNode.addChildren(childNode);
         }
 
         if (packageArr.length > 1) {
-            addPackageNode(childNode, packageArr[1]);
+            addPackageNode(childNode, packageArr[1], groupPrefix, false);
+        } else {
+            childNode.setIconCls("icon-cls");
         }
     }
 
-    private JSONTreeNode addClassNode(JSONTreeNode packageNode, String className) {
-        JSONTreeNode classNode = new JSONTreeNode();
-        classNode = new JSONTreeNode();
-        classNode = new JSONTreeNode();
-        classNode.setId(className);
-        classNode.setText(className);
-        classNode.setCls("package");
-        classNode.setIconCls("icon-cls");
-        classNode.setSingleClickExpand(true);
-        classNode.setFullPath(packageNode.getFullPath() + "/" + className);
-
-        packageNode.addChildren(classNode);
-
-        return classNode;
-    }
-
+    /**
+     * 创建方法节点
+     * @param classNode class节点
+     * @param methods 方法名称数组
+     * @param serviceKey 获取URL的serviceKey，方便界面根据方法节点获取对应的URL；
+     */
     private void addMethodNode(JSONTreeNode classNode, String[] methods, String serviceKey) {
 
         for (String methodName : methods) {
             JSONTreeNode methodNode = new JSONTreeNode();
             methodNode.setId(methodName);
             methodNode.setText(methodName);
-            methodNode.setFullPath(classNode.getFullPath() + "/" + methodName);
+            methodNode.setFullPath(classNode.getFullPath() + FOLDER_SPLIT + methodName);
+            methodNode.setFullText(classNode.getFullText() + FOLDER_SPLIT + methodName);
             methodNode.setCls("cls");
             methodNode.setIconCls("icon-method");
             methodNode.setLeaf(true);
@@ -127,13 +147,14 @@ public class APITestController {
     public @ResponseBody
     String getApiList() {
 
-        Set<String> serviceKeySet = InterfaceLoader.REGISTRY_PROVIDER_CACHE.keySet();
+        Set<String> serviceKeySet = InterfaceLoader.getRegistryProviderCache().keySet();
 
         JSONTreeNode apidocsNode = new JSONTreeNode();
-        apidocsNode.setId("apidocs");
-        apidocsNode.setText("API Lists");
+        apidocsNode.setId("ApiList");
+        apidocsNode.setText("ApiList");
         apidocsNode.setIconCls("icon-docs");
-        apidocsNode.setFullPath("apidocs");
+        apidocsNode.setFullPath("ApiList");
+        apidocsNode.setFullText("ApiList");
         apidocsNode.setSingleClickExpand(true);
 
         // beanName格式：group/com.xxx.xxxProvider:version
@@ -159,42 +180,28 @@ public class APITestController {
                 version = strArr2[1];
             }
 
-            String packageName = className.substring(0, className.lastIndexOf("."));
-            String beanName = className.substring(className.lastIndexOf(".") + 1);
+            String packageName = className.replace(".", FOLDER_SPLIT);
 
-            if (StringUtils.hasText(version)) {
-                beanName = beanName + ":" + version;
+            if (!StringUtils.hasText(group)) {
+                group = "NULL_GROUP";
+            }
+            packageName = group + FOLDER_SPLIT + packageName;
+
+            if (StringUtils.hasText(version))
+                packageName = packageName + ":" + version;
+
+            this.addPackageNode(apidocsNode, packageName, "", StringUtils.hasText(group));
+
+            JSONTreeNode classNode = this.findChild(apidocsNode, packageName);
+
+            if (null != classNode) {
+                this.addMethodNode(classNode, url.getParameter("methods").split(","), serviceKey);
             }
 
-            if (StringUtils.hasText(group)) {
-                JSONTreeNode groupNode = new JSONTreeNode();
-                groupNode.setId(group);
-                groupNode.setText(group);
-                groupNode.setCls("package");
-                groupNode.setIconCls("icon-cmp"); // icon-cmp
-                groupNode.setSingleClickExpand(true);
+        }
 
-                this.addPackageNode(groupNode, packageName);
-
-                JSONTreeNode packageNode = this.findChild(groupNode, packageName);
-
-                if (null != packageNode) {
-                    JSONTreeNode classNode = this.addClassNode(packageNode, beanName);
-                    this.addMethodNode(classNode, url.getParameter("methods").split(","), serviceKey);
-                }
-
-                apidocsNode.addChildren(groupNode);
-            } else {
-
-                this.addPackageNode(apidocsNode, packageName);
-                JSONTreeNode packageNode = this.findChild(apidocsNode, packageName);
-
-                if (null != packageNode) {
-                    JSONTreeNode classNode = this.addClassNode(packageNode, beanName);
-                    this.addMethodNode(classNode, url.getParameter("methods").split(","), serviceKey);
-                }
-            }
-
+        if (null == apidocsNode.getChildren() || apidocsNode.getChildren().size() == 0) {
+            apidocsNode.setLeaf(true);
         }
 
         List<JSONTreeNode> parentList = new ArrayList<JSONTreeNode>();
@@ -266,10 +273,13 @@ public class APITestController {
         result.put("paramDesc", InterfaceLoader.getParamDesc(serviceKey, methodName));
 
         String[] serviceUrls = InterfaceLoader.getServiceUrl(serviceKey);
-        String[][] displayUrls = new String[serviceUrls.length][2];
-        for (int i = 0; i < serviceUrls.length; i++) {
-            displayUrls[i][0] = serviceUrls[i];
-            displayUrls[i][1] = serviceUrls[i];
+        String[][] displayUrls = new String[0][0];
+        if (serviceUrls != null) {
+            displayUrls = new String[serviceUrls.length][2];
+            for (int i = 0; i < serviceUrls.length; i++) {
+                displayUrls[i][0] = serviceUrls[i];
+                displayUrls[i][1] = serviceUrls[i];
+            }
         }
 
         result.put("serviceUrls", displayUrls);

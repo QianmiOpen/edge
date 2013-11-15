@@ -16,6 +16,7 @@
     <root level="WARN">
         <appender-ref ref="STDOUT" />
     </root>
-    <logger name="com.ofpay" level="DEBUG" />
+    <logger name="com.ofpay" level="WARN" />
     <logger name="org.springframework" level="WARN" />
+    <logger name="com.alibaba.dubbo" level="ERROR" />
 </configuration>

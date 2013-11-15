@@ -2,34 +2,29 @@
 <web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee"
     xmlns:jsp="http://java.sun.com/xml/ns/javaee/jsp" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
     xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
-    <display-name>edge_apitest</display-name>
-    <description>edge_apitest</description>
+    <display-name>edge</display-name>
+    <description>Dubbo Visualized Testing Tool</description>
     <context-param>
         <param-name>webAppRootKey</param-name>
-        <param-value>edge_apitest.root</param-value>
-    </context-param>
-    <context-param>
-        <param-name>contextConfigLocation</param-name>
-        <param-value>
-            <!-- 系统配置文件加载 -->
-            classpath*:applicationContext-common.xml;
-            classpath*:applicationContext-dubbo.xml;
-            classpath*:dubbo-consumer.xml;
-        </param-value>
+        <param-value>edge.root</param-value>
     </context-param>
     <servlet>
-        <servlet-name>EDGE_APITestMVC</servlet-name>
+        <servlet-name>EDGE_MVC</servlet-name>
         <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
         <init-param>
             <param-name>contextConfigLocation</param-name>
             <param-value>
             classpath*:applicationContext-mvc.xml;
+            <!-- 系统配置文件加载 -->
+            classpath*:applicationContext-common.xml;
+            classpath*:applicationContext-dubbo.xml;
+            classpath*:dubbo-consumer.xml;
             </param-value>
         </init-param>
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>
-        <servlet-name>EDGE_APITestMVC</servlet-name>
+        <servlet-name>EDGE_MVC</servlet-name>
         <url-pattern>/</url-pattern>
     </servlet-mapping>
     <filter>
@@ -51,13 +46,7 @@
     <listener>
         <listener-class>org.springframework.web.util.IntrospectorCleanupListener</listener-class>
     </listener>
-    <listener>
-        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
-    </listener>
-
-    <listener>
-        <listener-class>com.ofpay.edge.listener.StartupListener</listener-class>
-    </listener>
+    
     <session-config>
         <session-timeout>3</session-timeout>
     </session-config>

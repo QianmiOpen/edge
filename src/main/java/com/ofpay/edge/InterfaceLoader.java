@@ -6,7 +6,6 @@ package com.ofpay.edge;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -14,13 +13,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
+import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.config.ApplicationConfig;
 import com.alibaba.dubbo.config.ReferenceConfig;
 import com.alibaba.dubbo.config.RegistryConfig;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.ofpay.edge.bean.ServiceBean;
+import com.ofpay.edge.listener.NotifyMe;
 
 /**
  * <p>
@@ -33,12 +33,7 @@ import com.ofpay.edge.bean.ServiceBean;
  */
 public class InterfaceLoader {
 
-    /**
-     * 注册中心上的Provider缓存
-     * key: group/com.xxx.xxxProvider:version
-     * value: dubbo服务Map<Long, URL>
-     */
-    public static ConcurrentMap<String, Map<Long, URL>> REGISTRY_PROVIDER_CACHE = new ConcurrentHashMap<String, Map<Long, URL>>();
+    private static Map<String, ReferenceConfig<Object>> ref_config_cache = new ConcurrentHashMap<String, ReferenceConfig<Object>>();
 
     private static RegistryConfig registry = null;
 
@@ -51,23 +46,51 @@ public class InterfaceLoader {
         InterfaceLoader.application = application;
     }
 
+    public static void destroyReference(String serviceKey, String serviceUrl) {
+
+        for (Map.Entry<String, ReferenceConfig<Object>> refEntry : ref_config_cache.entrySet()) {
+            String key = refEntry.getKey();
+
+            if ((Constants.ANY_VALUE.equals(serviceUrl) && key.startsWith(serviceKey))
+                    || key.equals(serviceKey + serviceUrl)) {
+                refEntry.getValue().destroy();
+                ref_config_cache.remove(key);
+            }
+        }
+    }
+
+    /**
+     * 根据serviceKey以及serviceUrl获取远程服务bean
+     * @param serviceKey 格式为：group/packege.beanName:version; 获取URL信息
+     * @param serviceUrl 指定访问的服务URL
+     * @return
+     */
     public static Object getServiceBean(String serviceKey, String serviceUrl) {
-        URL url = getRandomRegisterCacheURL(serviceKey);
 
-        if (url == null) {
-            return null;
+        ReferenceConfig<Object> reference = null;// ref_config_cache.get(serviceKey + serviceUrl);
+
+        if (reference == null) {
+            URL url = getRandomRegisterCacheURL(serviceKey);
+
+            if (url == null) {
+                return null;
+            }
+
+            // 引用远程服务
+            reference = new ReferenceConfig<Object>(); // 此实例很重，封装了与注册中心的连接以及与提供者的连接，请自行缓存，否则可能造成内存和连接泄漏
+            reference.setApplication(application);
+            reference.setRegistry(registry); // 多个注册中心可以用setRegistries()
+            reference.setCheck(false);
+            reference.setInterface(url.getPath());
+            if (StringUtils.hasText(serviceUrl)) {
+                reference.setUrl(serviceUrl); // 指定调用服务
+            }
+            reference.setGroup(url.getParameter("group"));
+            reference.setVersion(url.getParameter("version"));
+
+            // ref_config_cache.put(serviceKey + serviceUrl, reference);
         }
 
-        // 引用远程服务
-        ReferenceConfig<Object> reference = new ReferenceConfig<Object>(); // 此实例很重，封装了与注册中心的连接以及与提供者的连接，请自行缓存，否则可能造成内存和连接泄漏
-        reference.setApplication(application);
-        reference.setRegistry(registry); // 多个注册中心可以用setRegistries()
-        reference.setCheck(false);
-        reference.setInterface(url.getPath());
-        if (StringUtils.hasText(serviceUrl)) {
-            reference.setUrl(serviceUrl); // 指定调用服务
-        }
-        reference.setVersion(url.getParameter("version"));
         // 和本地bean一样使用xxxService
         return reference.get(); // 注意：此代理对象内部封装了所有通讯细节，对象较重，请缓存复用
     }
@@ -81,13 +104,19 @@ public class InterfaceLoader {
         return getServiceBean(serviceKey, null);
     }
 
+    /**
+     * 获取Method对象
+     * @param serviceBean 服务bean
+     * @param methodName 方法名
+     * @return
+     */
     public static Method getServiceMethod(Object serviceBean, String methodName) {
         Method serviceMethod = null;
         Class<?> clazz = serviceBean.getClass();
         Method[] methods = clazz.getDeclaredMethods();
 
         for (Method method : methods) {
-            if (method.getName().equals(methodName)) {
+            if (method.getName().equals(methodName)) { // TODO 在方法有重载时，此处有bug
                 serviceMethod = method;
             }
         }
@@ -113,7 +142,7 @@ public class InterfaceLoader {
 
         try {
             Class<?> clazz = Class.forName(clazzName);
-            logger.info("got {} in registry !!!!", clazzName);
+            logger.debug("got {} in registry !!!!", clazzName);
 
             Method[] methods = clazz.getDeclaredMethods();
 
@@ -159,8 +188,13 @@ public class InterfaceLoader {
 
     }
 
+    /**
+     * 获取可供访问的服务地址列表
+     * @param serviceKey 格式为：group/packege.beanName:version;
+     * @return
+     */
     public static String[] getServiceUrl(String serviceKey) {
-        Map<Long, URL> map = InterfaceLoader.REGISTRY_PROVIDER_CACHE.get(serviceKey);
+        Map<Long, URL> map = InterfaceLoader.getRegistryProviderCache().get(serviceKey);
 
         String[] serviceUrls = null;
         if (map != null) {
@@ -176,8 +210,13 @@ public class InterfaceLoader {
         return serviceUrls;
     }
 
+    /**
+     * 随机获取一个serviceKey对应的URL
+     * @param serviceKey 格式为：group/packege.beanName:version;
+     * @return
+     */
     public static URL getRandomRegisterCacheURL(String serviceKey) {
-        Map<Long, URL> map = InterfaceLoader.REGISTRY_PROVIDER_CACHE.get(serviceKey);
+        Map<Long, URL> map = InterfaceLoader.getRegistryProviderCache().get(serviceKey);
         if (map != null) {
             Set<Long> urlSet = map.keySet();
             for (Long id : urlSet) {
@@ -188,25 +227,14 @@ public class InterfaceLoader {
     }
 
     /**
-     * 所有的Bean的Map；
-     * key为packege.beanName@version@group;
-     * value为bean实例
+     * 获取注册中心上的Provider缓存
+     * key: group/com.xxx.xxxProvider:version
+     * value: dubbo服务Map<Long, URL>
      */
-    public static Map<String, ServiceBean> allBeanMap = new TreeMap<String, ServiceBean>();
-
-    /**
-     * 所有的methdo的Map；
-     * key为beanName.methodName;
-     * value为Method
-     */
-    public static Map<String, Method> allMethodMap = new TreeMap<String, Method>();
-
-    /**
-     * 接口入参描述的map
-     * key为beanName.methodName;
-     * value为接口入参的Json描述
-     */
-    public static Map<String, String> allMethodMapParamDesc = new TreeMap<String, String>();
+    public static ConcurrentMap<String, Map<Long, URL>> getRegistryProviderCache() {
+        return (null == NotifyMe.registryCache.get(Constants.PROVIDERS_CATEGORY)) ? new ConcurrentHashMap<String, Map<Long, URL>>()
+                : NotifyMe.registryCache.get(Constants.PROVIDERS_CATEGORY);
+    }
 
     public static boolean isWrapClass(Class<?> clz) {
         try {
