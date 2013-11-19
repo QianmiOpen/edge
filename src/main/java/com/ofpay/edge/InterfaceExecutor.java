@@ -36,6 +36,7 @@ public class InterfaceExecutor {
      * @param inputParamArray 方法入参信息，采用Json描述
      * @return 调用结果
      */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public static String execute(Object target, Method method, JSONArray inputParamArray) {
         String result = null;
 
@@ -61,6 +62,26 @@ public class InterfaceExecutor {
 
                     if (InterfaceLoader.isWrapClass(paramType)) {
                         params[i] = ConvertUtils.convert(param, paramType);
+                    } else if (paramType.isEnum()) {
+                        if (param instanceof String) {
+                            String name = (String) param;
+                            if (name.length() == 0) {
+                                params[i] = null;
+                            } else {
+                                params[i] = Enum.valueOf((Class<? extends Enum>) paramType, name);
+                            }
+                        } else if (param instanceof Number) {
+                            int ordinal = ((Number) param).intValue();
+
+                            Method mt = paramType.getMethod("values");
+                            Object[] values = (Object[]) mt.invoke(null);
+                            for (Object value : values) {
+                                Enum e = (Enum) value;
+                                if (e.ordinal() == ordinal) {
+                                    params[i] = e;
+                                }
+                            }
+                        }
                     } else if (param instanceof JSONObject) {
                         params[i] = JSON.toJavaObject((JSONObject) param, paramType);
                     }
