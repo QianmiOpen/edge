@@ -46,6 +46,17 @@
     <listener>
         <listener-class>org.springframework.web.util.IntrospectorCleanupListener</listener-class>
     </listener>
+    <context-param>
+        <param-name>thirdLibPath</param-name>
+        <param-value>/WEB-INF/third_lib</param-value>
+    </context-param>
+    <context-param>
+        <param-name>thirdLibRefreshIntervalSeconds</param-name>
+        <param-value>60</param-value>
+    </context-param>
+    <listener>
+        <listener-class>com.ofpay.edge.listener.StartupListener</listener-class>
+    </listener>
     
     <session-config>
         <session-timeout>3</session-timeout>

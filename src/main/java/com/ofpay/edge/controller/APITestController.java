@@ -162,22 +162,15 @@ public class APITestController {
 
             URL url = InterfaceLoader.getRandomRegisterCacheURL(serviceKey);
 
-            String group = "";
-            String className = "";
-            String version = "";
+            String group = url.getParameter("group");
+            String className = url.getPath();
+            String version = url.getParameter("version");
 
-            String strArr1[] = serviceKey.split("/");
-            if (strArr1.length > 1) {
-                group = strArr1[0];
-                className = strArr1[1];
-            } else {
-                className = strArr1[0];
-            }
-
-            String[] strArr2 = className.split(":");
-            if (strArr2.length > 1) {
-                className = strArr2[0];
-                version = strArr2[1];
+            try {
+                Class.forName(className); // 忽略上下文中不存在class
+            } catch (ClassNotFoundException e) {
+                logger.debug("can not found bean {} in context", className);
+                continue;
             }
 
             String packageName = className.replace(".", FOLDER_SPLIT);

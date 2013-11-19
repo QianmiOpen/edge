@@ -72,11 +72,13 @@ public class NotifyMe implements InitializingBean, DisposableBean, NotifyListene
     public void afterPropertiesSet() throws Exception {
         logger.info("Init NotifyMe...");
 
+        // init dubbo application context
         RegistryConfig registry = appContext.getBean("default-dubbo-registry", RegistryConfig.class);
         ApplicationConfig application = appContext.getBean("default-dubbo-application", ApplicationConfig.class);
 
         InterfaceLoader.init(registry, application);
 
+        // 订阅注册中心的服务变化
         subscribe = new URL(Constants.ADMIN_PROTOCOL, NetUtils.getLocalHost(), 0, "", subcribeParams);
         registryService.subscribe(subscribe, this);
 
@@ -97,12 +99,6 @@ public class NotifyMe implements InitializingBean, DisposableBean, NotifyListene
             String clazzName = url.getPath();
             if (Pattern.matches(urlFilterRegex, clazzName)) { // 过滤非关注的URL
 
-                try {
-                    Class.forName(clazzName); // 忽略上下文中不存在class
-                } catch (ClassNotFoundException e) {
-                    logger.warn("can not found bean {} in context", clazzName);
-                    continue;
-                }
                 String category = url.getParameter(Constants.CATEGORY_KEY, Constants.PROVIDERS_CATEGORY);
                 if (Constants.EMPTY_PROTOCOL.equalsIgnoreCase(url.getProtocol())) { // 注意：empty协议的group和version为*
                     ConcurrentMap<String, Map<Long, URL>> services = registryCache.get(category);
