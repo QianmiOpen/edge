@@ -10,3 +10,5 @@ Edge是一款用于测试Dubbo接口的开发者测试工具；能够让开发�
 3. 将上述jar包放入${edge.home}/WEB-INF/lib目录中；
 4. 修改${edge.home}/WEB-INF/config.properties，配置待测dubbo服务所在的注册中心；
 5. 启动web容器；
+
+![image](https://github.com/ofpay/edge/blob/master/main.jpg)
