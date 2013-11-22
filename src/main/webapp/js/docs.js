@@ -64,7 +64,7 @@ DocPanel = Ext.extend(Ext.Panel, {
     containerScroll : true,
     initComponent : function() {
 //        var serviceURLCombo = new Ext.form.ComboBox();
-        
+
         var formPanel = new Ext.form.FormPanel({
             labelWidth : 75,
             border : false,
@@ -107,6 +107,21 @@ DocPanel = Ext.extend(Ext.Panel, {
                 xtype : 'textarea',
                 value : this.defParam,
                 height : 370,
+                listeners:{
+                    scope: this,
+                    'blur': function(){
+                        var frm = this.formPanel.getForm();
+                        var paramField = frm.findField("params");
+                        var formatParam;
+                        try{
+                            // Json 格式化
+                            formatParam = js_beautify(paramField.getValue(), 4, ' ');
+                        } catch(err) {
+                            return;
+                        }
+                        paramField.setValue(formatParam);
+                    }
+                },
                 allowBlank : true
             } ],
             buttons : [ {
@@ -116,18 +131,31 @@ DocPanel = Ext.extend(Ext.Panel, {
                 handler : function() {
                     var frm = this.formPanel.getForm();
                     var paramField = frm.findField("params");
-                    var formatParam = js_beautify(paramField.getValue(), 4, ' ');
-                    paramField.setValue(formatParam);
-                    
                     var resultArea = this.resultArea;
+
+                    var formatParam;
+                    try{
+                        // Json 格式化
+                        formatParam = js_beautify(paramField.getValue(), 4, ' ');
+                    } catch(err) {
+                        resultArea.setValue("JSON格式错误");
+                        return;
+                    }
+                    paramField.setValue(formatParam);
+
                     frm.submit({
                         waitMsg : '正在提交数据',
                         waitTitle : '提示',
                         url : 'executeTest.do',
                         method : 'GET',
                         success : function(form, action) {
-                            
-                            var result = js_beautify(action.result.msg, 4, ' ');
+                            var result;
+                            try{
+                                // Json 格式化
+                                result = js_beautify(action.result.msg, 4, ' ');
+                            } catch(err) {
+                                result = action.result.msg;
+                            }
                             resultArea.setValue(result);
                         },
                         failure : function(form, action) {
@@ -212,24 +240,38 @@ Ext.extend(MainPanel, Ext.TabPanel, {
     initEvents : function() {
         MainPanel.superclass.initEvents.call(this);
     },
-    
-    loadClass : function(href, cls, fullPath, serviceKey, fullText) {
-        var id = 'docs-' + cls;
+
+    // node.attributes.href, node.text, node.attributes.fullPath, node.attributes.serviceKey, node.attributes.fullText
+    loadClass : function(node) {
+        var id = 'docs-' + node.id;
         var tab = this.getComponent(id);
         if (tab) {
             this.setActiveTab(tab);
         } else {
+            var nodeAttr = node.attributes;
+            var fullPath = nodeAttr.fullPath;
+            var serviceKey = nodeAttr.serviceKey;
+            var fullText = nodeAttr.fullText;
+            var tabTitle = node.text;
+
             var me = this;
             Ext.Ajax.request({
                 url : 'getParamDesc.do',
                 method : 'post',
                 params : {
                     serviceKey : serviceKey,
-                    methodName : cls
+                    methodName : node.text
                 },
                 success : function(response, options) {
                     var o = Ext.util.JSON.decode(response.responseText);
-                    var defParam = o.paramDesc ? js_beautify(o.paramDesc, 4, ' ') : "";
+                    var defParam = "";;
+                    try{
+                        // Json 格式化
+                        defParam = o.paramDesc ? js_beautify(o.paramDesc, 4, ' ') : "";
+                    } catch(err) {
+                        defParam = o.paramDesc;
+                    }
+
                     var serviceUrls = o.serviceUrls;
                     
                     var p = me.add(new DocPanel({
@@ -238,10 +280,10 @@ Ext.extend(MainPanel, Ext.TabPanel, {
                         defParam : defParam,
                         serviceKey : serviceKey,
                         serviceUrls : serviceUrls,
-                        title : cls,
+                        title : tabTitle,
                         tabTip : fullText,
                         // autoLoad: autoLoad,
-                        iconCls : Docs.icons[cls]
+                        iconCls : Docs.icons[tabTitle]
                     }));
                     me.setActiveTab(p);
                 },
@@ -250,10 +292,11 @@ Ext.extend(MainPanel, Ext.TabPanel, {
                         id : id,
                         cclass : fullPath,
                         serviceKey : serviceKey,
-                        title : cls,
+                        serviceUrls : [[]],
+                        title : tabTitle,
                         tabTip : fullText,
                         // autoLoad: autoLoad,
-                        iconCls : Docs.icons[cls]
+                        iconCls : Docs.icons[tabTitle]
                     }));
                     me.setActiveTab(p);
                 }
@@ -276,8 +319,7 @@ Ext.onReady(function() {
             if(node.id == 'ApiList'){ // id等于ApiList时不打开tab
                 return;
             }
-            mainPanel.loadClass(node.attributes.href, node.id, node.attributes.fullPath, node.attributes.serviceKey,
-                    node.attributes.fullText);
+            mainPanel.loadClass(node);
         }
     });
     

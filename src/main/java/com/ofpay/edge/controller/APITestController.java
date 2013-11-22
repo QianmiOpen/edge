@@ -4,12 +4,7 @@
 package com.ofpay.edge.controller;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +43,7 @@ public class APITestController {
      * @param path 子节点ID,支持沿深度查询。例如：com/xxx/abc; 直接返回abc节点
      * @return
      */
-    private JSONTreeNode findChild(JSONTreeNode treeNode, String path) {
+    private JSONTreeNode findChildByText(JSONTreeNode treeNode, String path) {
         if (treeNode == null) {
             return null;
         }
@@ -57,7 +52,7 @@ public class APITestController {
         JSONTreeNode childNode = null;
         for (String shortPath : list) {
 
-            childNode = treeNode.getChild(treeNode.getId() + shortPath);
+            childNode = treeNode.getChildByText(shortPath);
             if (childNode == null) {
                 return null;
             } else {
@@ -77,18 +72,18 @@ public class APITestController {
      * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|--abc <br>
      * @param parentNode 父节点
      * @param packageName 包名，支持深度创建；
-     * @param groupPrefix 组前缀
+     * @param isGroup 是否group；根据此标记选择不同样式
      */
-    private void addPackageNode(JSONTreeNode parentNode, String packageName, String groupPrefix, boolean isGroup) {
+    private void addPackageNode(JSONTreeNode parentNode, String packageName, boolean isGroup) {
 
         String[] packageArr = packageName.split(FOLDER_SPLIT, 2);
 
         String nodeName = packageArr[0];
-        String nodeId = parentNode.getId() + nodeName;
+        String nodeId = UUID.randomUUID().toString();
         String fullPath = parentNode.getFullPath() + FOLDER_SPLIT + nodeId;
         String fullText = parentNode.getFullText() + FOLDER_SPLIT + nodeName;
 
-        JSONTreeNode childNode = parentNode.getChild(nodeId); // 根据ID获取node是否存在
+        JSONTreeNode childNode = parentNode.getChildByText(nodeName); // 根据node text 获取node是否存在
 
         if (null == childNode) { // 若不存则创建node，并添加到children中
             childNode = new JSONTreeNode();
@@ -109,7 +104,7 @@ public class APITestController {
         }
 
         if (packageArr.length > 1) {
-            addPackageNode(childNode, packageArr[1], groupPrefix, false);
+            addPackageNode(childNode, packageArr[1], false);
         } else {
             childNode.setIconCls("icon-cls");
         }
@@ -125,9 +120,10 @@ public class APITestController {
 
         for (String methodName : methods) {
             JSONTreeNode methodNode = new JSONTreeNode();
-            methodNode.setId(methodName);
+            String nodeId = UUID.randomUUID().toString();
+            methodNode.setId(nodeId);
             methodNode.setText(methodName);
-            methodNode.setFullPath(classNode.getFullPath() + FOLDER_SPLIT + methodName);
+            methodNode.setFullPath(classNode.getFullPath() + FOLDER_SPLIT + nodeId);
             methodNode.setFullText(classNode.getFullText() + FOLDER_SPLIT + methodName);
             methodNode.setCls("cls");
             methodNode.setIconCls("icon-method");
@@ -183,9 +179,9 @@ public class APITestController {
             if (StringUtils.hasText(version))
                 packageName = packageName + ":" + version;
 
-            this.addPackageNode(apidocsNode, packageName, "", StringUtils.hasText(group));
+            this.addPackageNode(apidocsNode, packageName, StringUtils.hasText(group));
 
-            JSONTreeNode classNode = this.findChild(apidocsNode, packageName);
+            JSONTreeNode classNode = this.findChildByText(apidocsNode, packageName);
 
             if (null != classNode) {
                 this.addMethodNode(classNode, url.getParameter("methods").split(","), serviceKey);

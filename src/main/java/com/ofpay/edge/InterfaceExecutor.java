@@ -31,8 +31,8 @@ public class InterfaceExecutor {
 
     /**
      * 接口执行方法
-     * @param intfName 接口名，根据此名字获取对应的bean对象
-     * @param methodName 方法名，根据此名字获取要调用的方法
+     * @param target Service Bean对象
+     * @param method Service Method
      * @param inputParamArray 方法入参信息，采用Json描述
      * @return 调用结果
      */
