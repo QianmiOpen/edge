@@ -18,7 +18,7 @@
                 <entry key="category" value="providers" />
                 <entry key="group" value="*" />
                 <entry key="classifier" value="*" />
-                <entry key="enabled" value="enabled" />
+                <entry key="enabled" value="*" />
                 <entry key="check" value="false" />
             </map>
         </property>

@@ -1,10 +1,10 @@
 package com.ofpay.edge.listener;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
@@ -24,10 +24,7 @@ import com.alibaba.dubbo.config.ApplicationConfig;
 import com.alibaba.dubbo.config.RegistryConfig;
 import com.alibaba.dubbo.registry.NotifyListener;
 import com.alibaba.dubbo.registry.RegistryService;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.ofpay.edge.InterfaceLoader;
-import com.ofpay.edge.bean.ServiceBean;
 import com.ofpay.edge.util.Tool;
 
 /**
@@ -42,7 +39,7 @@ public class NotifyMe implements InitializingBean, DisposableBean, NotifyListene
     private static final String[] DEFAULT_SUBSCRIBE_PARAMS = new String[] { Constants.INTERFACE_KEY,
             Constants.ANY_VALUE, Constants.GROUP_KEY, Constants.ANY_VALUE, Constants.VERSION_KEY, Constants.ANY_VALUE,
             Constants.CLASSIFIER_KEY, Constants.ANY_VALUE, Constants.CATEGORY_KEY, Constants.PROVIDERS_CATEGORY,
-            Constants.ENABLED_KEY, Constants.ENABLED_KEY, Constants.CHECK_KEY, String.valueOf(false) };
+            Constants.ENABLED_KEY, Constants.ANY_VALUE, Constants.CHECK_KEY, String.valueOf(false) };
 
     private URL subscribe = null;
 
@@ -56,8 +53,7 @@ public class NotifyMe implements InitializingBean, DisposableBean, NotifyListene
 
     private static Logger logger = LoggerFactory.getLogger(NotifyMe.class);
 
-    // private final ConcurrentMap<String, Map<Long, URL>> registryProvoderCache = new ConcurrentHashMap<String,
-    // Map<Long, URL>>();
+    public static final ConcurrentMap<String, ConcurrentMap<String, Map<Long, URL>>> registryCache = new ConcurrentHashMap<String, ConcurrentMap<String, Map<Long, URL>>>();
 
     private RegistryService registryService;
 
@@ -76,11 +72,13 @@ public class NotifyMe implements InitializingBean, DisposableBean, NotifyListene
     public void afterPropertiesSet() throws Exception {
         logger.info("Init NotifyMe...");
 
+        // init dubbo application context
         RegistryConfig registry = appContext.getBean("default-dubbo-registry", RegistryConfig.class);
         ApplicationConfig application = appContext.getBean("default-dubbo-application", ApplicationConfig.class);
 
         InterfaceLoader.init(registry, application);
 
+        // 订阅注册中心的服务变化
         subscribe = new URL(Constants.ADMIN_PROTOCOL, NetUtils.getLocalHost(), 0, "", subcribeParams);
         registryService.subscribe(subscribe, this);
 
@@ -91,118 +89,68 @@ public class NotifyMe implements InitializingBean, DisposableBean, NotifyListene
             return;
         }
 
+        logger.info("********************************************");
+
+        // Map<category, Map<servicename, Map<Long, URL>>>
+        final Map<String, Map<String, Map<Long, URL>>> categories = new HashMap<String, Map<String, Map<Long, URL>>>();
         for (URL url : urls) {
+            logger.info(url.toFullString());
+
             String clazzName = url.getPath();
             if (Pattern.matches(urlFilterRegex, clazzName)) { // 过滤非关注的URL
 
-                try {
-                    Class.forName(clazzName); // 忽略上下文中不存在class
-                } catch (ClassNotFoundException e) {
-                    logger.warn("can not found bean {} in context", clazzName);
-                    continue;
-                }
-
+                String category = url.getParameter(Constants.CATEGORY_KEY, Constants.PROVIDERS_CATEGORY);
                 if (Constants.EMPTY_PROTOCOL.equalsIgnoreCase(url.getProtocol())) { // 注意：empty协议的group和version为*
-                    String group = url.getParameter(Constants.GROUP_KEY);
-                    String version = url.getParameter(Constants.VERSION_KEY);
-
-                    // 注意：empty协议的group和version为*
-                    if (!Constants.ANY_VALUE.equals(group) && !Constants.ANY_VALUE.equals(version)) {
-                        InterfaceLoader.REGISTRY_PROVIDER_CACHE.remove(url.getServiceKey());
-                    } else {
-                        for (Map.Entry<String, Map<Long, URL>> serviceEntry : InterfaceLoader.REGISTRY_PROVIDER_CACHE
-                                .entrySet()) {
-                            String service = serviceEntry.getKey();
-                            if (Tool.getInterface(service).equals(url.getServiceInterface())
-                                    && (Constants.ANY_VALUE.equals(group) || StringUtils.isEquals(group,
-                                            Tool.getGroup(service)))
-                                    && (Constants.ANY_VALUE.equals(version) || StringUtils.isEquals(version,
-                                            Tool.getVersion(service)))) {
-                                InterfaceLoader.REGISTRY_PROVIDER_CACHE.remove(service);
+                    ConcurrentMap<String, Map<Long, URL>> services = registryCache.get(category);
+                    if (services != null) {
+                        String group = url.getParameter(Constants.GROUP_KEY);
+                        String version = url.getParameter(Constants.VERSION_KEY);
+                        // 注意：empty协议的group和version为*
+                        if (!Constants.ANY_VALUE.equals(group) && !Constants.ANY_VALUE.equals(version)) {
+                            services.remove(url.getServiceKey());
+                            InterfaceLoader.destroyReference(url.getServiceKey(), Constants.ANY_VALUE);
+                        } else {
+                            for (Map.Entry<String, Map<Long, URL>> serviceEntry : services.entrySet()) {
+                                String service = serviceEntry.getKey();
+                                // 如果接口相同&&group相同&&版本相同，则下清除缓存
+                                if ((Tool.getInterface(service).equals(url.getServiceInterface()) || Tool.getInterface(
+                                        service).equals(url.getPath()))
+                                        && (Constants.ANY_VALUE.equals(group) || StringUtils.isEquals(group,
+                                                Tool.getGroup(service)))
+                                        && (Constants.ANY_VALUE.equals(version) || StringUtils.isEquals(version,
+                                                Tool.getVersion(service)))) {
+                                    services.remove(service);
+                                    InterfaceLoader.destroyReference(service, Constants.ANY_VALUE);
+                                }
                             }
                         }
                     }
                 } else {
+                    Map<String, Map<Long, URL>> services = categories.get(category);
+                    if (services == null) {
+                        services = new HashMap<String, Map<Long, URL>>();
+                        categories.put(category, services);
+                    }
                     String service = url.getServiceKey();
-                    // initContext(url);
-                    Map<Long, URL> ids = InterfaceLoader.REGISTRY_PROVIDER_CACHE.get(service);
+                    Map<Long, URL> ids = services.get(service);
                     if (ids == null) {
                         ids = new HashMap<Long, URL>();
-                        // 提前占位，确保并发无问题
-                        InterfaceLoader.REGISTRY_PROVIDER_CACHE.put(service, ids);
+                        services.put(service, ids);
                     }
                     ids.put(ID.incrementAndGet(), url);
                 }
+
             }
         }
-    }
 
-    protected void initContext(URL url) {
-        String clazzName = url.getPath();
-        String version = url.getParameter("version");
-        String host = url.getHost();
-        String revision = url.getParameter("revision");
-        int port = url.getPort();
-
-        ServiceBean serviceBean = new ServiceBean();
-        serviceBean.setClazzName(clazzName);
-        serviceBean.setHost(host);
-        serviceBean.setPort(port);
-        serviceBean.setRevision(revision);
-        serviceBean.setVersion(version);
-        List<String> methodNames = Arrays.asList(url.getParameter("methods").split(","));
-        serviceBean.setMethods(methodNames);
-
-        try {
-            Class<?> clazz = Class.forName(clazzName);
-            // Object l = InterfaceExecutor.getServiceBean(serviceBean);
-
-            logger.info("got {} in registry !!!!", clazzName);
-            String beanName = clazzName.substring(clazzName.lastIndexOf(".") + 1);
-            InterfaceLoader.allBeanMap.put(beanName, serviceBean);
-
-            Method[] methods = clazz.getDeclaredMethods();
-            for (Method method : methods) {
-                String methodName = method.getName();
-                if (methodNames.contains(methodName))
-                    try {
-                        String key = beanName + "." + methodName;
-                        InterfaceLoader.allMethodMap.put(key, method);
-                        Class<?>[] types = method.getParameterTypes();
-
-                        if (types != null) {
-                            Object[] objs = new Object[types.length];
-
-                            for (int i = 0; i < objs.length; i++) {
-                                try {
-                                    Class<?> type = types[i];
-                                    if (InterfaceLoader.isWrapClass(type) || type.isEnum() || type.isInterface()) {
-                                        objs[i] = null;
-                                    } else if (type.isArray()) {
-                                        objs[i] = new Object[0];
-                                    } else {
-                                        objs[i] = type.newInstance();
-                                    }
-                                } catch (Exception e) {
-                                    objs[i] = null;
-                                    logger.error("加载{}方法的参数描述出错", new Object[] { key, e });
-                                }
-                            }
-
-                            String paramDesc = JSON.toJSONString(objs, SerializerFeature.QuoteFieldNames,
-                                    SerializerFeature.UseSingleQuotes, SerializerFeature.WriteMapNullValue,
-                                    SerializerFeature.WriteNullStringAsEmpty, SerializerFeature.WriteNullListAsEmpty,
-                                    SerializerFeature.SortField);
-
-                            InterfaceLoader.allMethodMapParamDesc.put(key, paramDesc);
-                        }
-                    } catch (Exception e2) {
-                        logger.warn("can not found method {} in class", methodName);
-                    }
+        for (Map.Entry<String, Map<String, Map<Long, URL>>> categoryEntry : categories.entrySet()) {
+            String category = categoryEntry.getKey();
+            ConcurrentMap<String, Map<Long, URL>> services = registryCache.get(category);
+            if (services == null) {
+                services = new ConcurrentHashMap<String, Map<Long, URL>>();
+                registryCache.put(category, services);
             }
-
-        } catch (Exception e) {
-            logger.warn("can not found bean {} in context", clazzName);
+            services.putAll(categoryEntry.getValue());
         }
     }
 
