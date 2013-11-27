@@ -103,4 +103,16 @@
             <scope>runtime</scope>
         </dependency>
     </dependencies>
+    <distributionManagement>
+        <repository>
+            <id>edge-releases</id>
+            <name>releases</name>
+            <url>https://repository-joecao.forge.cloudbees.com/release/</url>
+        </repository>
+        <snapshotRepository>
+            <id>edge-snapshots</id>
+            <name>snapshots</name>
+            <url>https://repository-joecao.forge.cloudbees.com/snapshot/ </url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>
