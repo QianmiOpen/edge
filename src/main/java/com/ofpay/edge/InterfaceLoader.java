@@ -171,9 +171,8 @@ public class InterfaceLoader {
                                 }
                             }
                             paramDesc = JSON.toJSONString(objs, SerializerFeature.QuoteFieldNames,
-                                    SerializerFeature.UseSingleQuotes, SerializerFeature.WriteMapNullValue,
-                                    SerializerFeature.WriteNullStringAsEmpty, SerializerFeature.WriteNullListAsEmpty,
-                                    SerializerFeature.SortField);
+                                    SerializerFeature.WriteMapNullValue, SerializerFeature.WriteNullStringAsEmpty,
+                                    SerializerFeature.WriteNullListAsEmpty, SerializerFeature.SortField);
                         }
                     } catch (Exception e2) {
                         logger.warn("can not found method {} in class", methodName);

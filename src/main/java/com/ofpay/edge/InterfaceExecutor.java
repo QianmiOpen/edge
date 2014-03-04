@@ -8,6 +8,8 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
 
+import com.alibaba.fastjson.parser.ParserConfig;
+import com.alibaba.fastjson.util.TypeUtils;
 import org.apache.commons.beanutils.ConvertUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,68 +39,71 @@ public class InterfaceExecutor {
      * @return 调用结果
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static String execute(Object target, Method method, JSONArray inputParamArray) {
-        String result = null;
-
-        Class<?>[] paramTypes = method.getParameterTypes();
+    public static String execute(Object target, Method method, JSONArray inputParamArray) throws Exception {
+        Object result;
 
         try {
-            Object[] params = null;
-
-            if (paramTypes != null && paramTypes.length > 0) {
-
-                if (inputParamArray == null || paramTypes.length != inputParamArray.size()) {
-                    log.warn("调用{}.{}接口参数值与参数个数不匹配, paramList:{}", new Object[] { target.getClass(), method.getName(),
-                            inputParamArray });
-                    return "参数错误，出入的参数个数与接口不匹配";
-                }
-
-                Object[] paramArr = inputParamArray.toArray();
-                params = new Object[inputParamArray.size()];
-
-                for (int i = 0; i < paramArr.length; i++) {
-                    Object param = paramArr[i];
-                    Class<?> paramType = paramTypes[i];
-
-                    if (InterfaceLoader.isWrapClass(paramType)) {
-                        params[i] = ConvertUtils.convert(param, paramType);
-                    } else if (paramType.isEnum()) {
-                        if (param instanceof String) {
-                            String name = (String) param;
-                            if (name.length() == 0) {
-                                params[i] = null;
-                            } else {
-                                params[i] = Enum.valueOf((Class<? extends Enum>) paramType, name);
-                            }
-                        } else if (param instanceof Number) {
-                            int ordinal = ((Number) param).intValue();
-
-                            Method mt = paramType.getMethod("values");
-                            Object[] values = (Object[]) mt.invoke(null);
-                            for (Object value : values) {
-                                Enum e = (Enum) value;
-                                if (e.ordinal() == ordinal) {
-                                    params[i] = e;
-                                }
-                            }
-                        }
-                    } else if (param instanceof JSONObject) {
-                        params[i] = JSON.toJavaObject((JSONObject) param, paramType);
-                    }
-                }
-            }
-
-            Object response = method.invoke(target, params);
-            result = JSON.toJSONString(response, SerializerFeature.QuoteFieldNames, SerializerFeature.UseSingleQuotes,
-                    SerializerFeature.WriteMapNullValue, SerializerFeature.SortField);
-
+            Object[] params = convertParams(inputParamArray, method.getParameterTypes());
+            result = method.invoke(target, params);
+        } catch (IllegalArgumentException e) {
+            result = e.getMessage();
         } catch (Exception e) {
-            result = "调用接口异常\r\n" + getStackTrace(e);
-            log.error("{}.{}接口调用发生异常, paramMap:{}", new Object[] { target.getClass(), method.getName(),
-                    inputParamArray, e });
+            throw e;
         }
 
-        return result;
+        return JSON.toJSONString(result, SerializerFeature.QuoteFieldNames, SerializerFeature.WriteMapNullValue,
+                SerializerFeature.SortField);
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public static Object[] convertParams(JSONArray inputParamArray, Class<?>[] paramTypes) throws Exception {
+        Object[] paramArr;
+
+        if (inputParamArray == null) {
+            paramArr = new Object[] {};
+        } else {
+            paramArr = inputParamArray.toArray();
+        }
+
+        if (paramTypes.length != paramArr.length) {
+            log.warn("参数值与参数类型个数不匹配, paramList:{}", new Object[] { inputParamArray });
+            throw new IllegalArgumentException("参数错误，传入的参数个数与接口不匹配");
+        }
+
+        Object[] params = new Object[paramArr.length];
+
+        for (int i = 0; i < paramArr.length; i++) {
+            Object param = paramArr[i];
+            Class<?> paramType = paramTypes[i];
+
+            params[i] = TypeUtils.cast(param, paramType, ParserConfig.getGlobalInstance());
+//            if (InterfaceLoader.isWrapClass(paramType)) {
+//                params[i] = ConvertUtils.convert(param, paramType);
+//            } else if (paramType.isEnum()) {
+//                if (param instanceof String) {
+//                    String name = (String) param;
+//                    if (name.length() == 0) {
+//                        params[i] = null;
+//                    } else {
+//                        params[i] = Enum.valueOf((Class<? extends Enum>) paramType, name);
+//                    }
+//                } else if (param instanceof Number) {
+//                    int ordinal = ((Number) param).intValue();
+//
+//                    Method mt = paramType.getMethod("values");
+//                    Object[] values = (Object[]) mt.invoke(null);
+//                    for (Object value : values) {
+//                        Enum e = (Enum) value;
+//                        if (e.ordinal() == ordinal) {
+//                            params[i] = e;
+//                        }
+//                    }
+//                }
+//            } else if (param instanceof JSONObject) {
+//                params[i] = JSON.toJavaObject((JSONObject) param, paramType);
+//            }
+        }
+        return params;
     }
 
     /**
