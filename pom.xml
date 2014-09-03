@@ -9,6 +9,7 @@
     <packaging>war</packaging>
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <dubbo.version>2.4.10</dubbo.version>
         <fastjson.version>1.1.37</fastjson.version>
         <com.thoughtworks.xstream.version>1.4.2</com.thoughtworks.xstream.version>
