@@ -305,14 +305,19 @@ public class JSONTreeNode implements Serializable {
      * @see java.lang.Object#equals(java.lang.Object)
      */
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-        if (obj == null || !(obj instanceof JSONTreeNode) || !StringUtils.hasText(id)) {
-            return false;
-        }
+        JSONTreeNode that = (JSONTreeNode) o;
 
-        JSONTreeNode another = (JSONTreeNode) obj;
-        return id.equals(another.id);
+        return !(id != null ? !id.equals(that.id) : that.id != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
     }
 
     /**
