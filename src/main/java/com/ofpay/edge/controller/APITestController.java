@@ -3,9 +3,11 @@
  */
 package com.ofpay.edge.controller;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 
+import com.alibaba.dubbo.rpc.RpcException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -216,10 +218,10 @@ public class APITestController {
         Map<String, Object> result = new HashMap<String, Object>();
 
         String msg = "";
+        String arr[] = methodName.split("@");
+        String serviceKey = arr[0];
+        String mth = arr[1];
         try {
-            String arr[] = methodName.split("@");
-            String serviceKey = arr[0];
-            String mth = arr[1];
 
             Object serviceBean = InterfaceLoader.getServiceBean(serviceKey, serviceUrl);
             if (serviceBean == null) {
@@ -235,6 +237,13 @@ public class APITestController {
 
         } catch (JSONException e) {
             msg = "参数格式错误;";
+        } catch (InvocationTargetException e){
+            msg = "InvocationTargetException:" + InterfaceExecutor.getStackTrace(e.getTargetException());
+
+            if(e.getTargetException() instanceof RpcException){
+                //RPC异常时，清除缓存的ReferenceConfig对象
+                InterfaceLoader.destroyReference(serviceKey, serviceUrl);
+            }
         } catch (Exception e) {
             msg = "调用接口异常;" + InterfaceExecutor.getStackTrace(e);
         }

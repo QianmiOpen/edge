@@ -33,7 +33,7 @@ import com.ofpay.edge.listener.NotifyMe;
  */
 public class InterfaceLoader {
 
-    private static Map<String, ReferenceConfig<Object>> ref_config_cache = new ConcurrentHashMap<String, ReferenceConfig<Object>>();
+    private static ConcurrentHashMap<String, ReferenceConfig<Object>> ref_config_cache = new ConcurrentHashMap<String, ReferenceConfig<Object>>();
 
     private static RegistryConfig registry = null;
 
@@ -47,15 +47,25 @@ public class InterfaceLoader {
     }
 
     public static void destroyReference(String serviceKey, String serviceUrl) {
-
-        for (Map.Entry<String, ReferenceConfig<Object>> refEntry : ref_config_cache.entrySet()) {
-            String key = refEntry.getKey();
-
-            if ((Constants.ANY_VALUE.equals(serviceUrl) && key.startsWith(serviceKey))
-                    || key.equals(serviceKey + serviceUrl)) {
-                refEntry.getValue().destroy();
-                ref_config_cache.remove(key);
+        if (Constants.ANY_VALUE.equals(serviceUrl)) { // 所有接口下线
+            for (Map.Entry<String, ReferenceConfig<Object>> refEntry : ref_config_cache.entrySet()) {
+                String key = refEntry.getKey();
+                ReferenceConfig<Object> referenceConfig = refEntry.getValue();
+                if (key.startsWith(serviceKey)) {
+                    if (referenceConfig != null) {
+                        referenceConfig.destroy();
+                    }
+                    ref_config_cache.remove(key);
+                }
             }
+        } else {
+            // 某个节点下线
+            String cacheKey = String.format("%s_%s", serviceKey, serviceUrl);
+            ReferenceConfig<Object> referenceConfig = ref_config_cache.get(cacheKey);
+            if (referenceConfig != null) {
+                referenceConfig.destroy();
+            }
+            ref_config_cache.remove(cacheKey);
         }
     }
 
@@ -67,7 +77,9 @@ public class InterfaceLoader {
      */
     public static Object getServiceBean(String serviceKey, String serviceUrl) {
 
-        ReferenceConfig<Object> reference = null;// ref_config_cache.get(serviceKey + serviceUrl);
+        String cacheKey = String.format("%s_%s", serviceKey, (StringUtils.hasText(serviceUrl) ? serviceUrl : "*"));
+
+        ReferenceConfig<Object> reference = ref_config_cache.get(cacheKey);
 
         if (reference == null) {
             URL url = getRandomRegisterCacheURL(serviceKey);
@@ -88,7 +100,10 @@ public class InterfaceLoader {
             reference.setGroup(url.getParameter("group"));
             reference.setVersion(url.getParameter("version"));
 
-            // ref_config_cache.put(serviceKey + serviceUrl, reference);
+            ReferenceConfig<Object> previousReference = ref_config_cache.putIfAbsent(cacheKey, reference);
+            if (previousReference != null) {
+                reference = previousReference;
+            }
         }
 
         // 和本地bean一样使用xxxService
