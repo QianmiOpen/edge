@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/ofpay/edge.png)](https://travis-ci.org/ofpay/edge)
+[![Build Status](https://travis-ci.org/QianmiOpen/edge.png)](https://travis-ci.org/QianmiOpen/edge)
 Edge --- Dubbo Visualized Testing Tool
 ========================
 Welcome to Edge!
