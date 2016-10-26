@@ -89,7 +89,6 @@ public class APITestController {
 
         if (null == childNode) { // 若不存则创建node，并添加到children中
             childNode = new JSONTreeNode();
-            childNode = new JSONTreeNode();
             childNode.setId(nodeId);
             // childNode.setId(groupPrefix + "_" + nodeId);
             childNode.setText(nodeName);
@@ -160,33 +159,35 @@ public class APITestController {
 
             URL url = InterfaceLoader.getRandomRegisterCacheURL(serviceKey);
 
-            String group = url.getParameter("group");
-            String className = url.getPath();
-            String version = url.getParameter("version");
+            if (url != null) {
+                String group = url.getParameter("group");
+                String className = url.getPath();
+                String version = url.getParameter("version");
 
-            try {
-                Class.forName(className); // 忽略上下文中不存在class
-            } catch (ClassNotFoundException e) {
-                logger.debug("can not found bean {} in context", className);
-                continue;
-            }
+                try {
+                    Class.forName(className); // 忽略上下文中不存在class
+                } catch (ClassNotFoundException e) {
+                    logger.debug("can not found bean {} in context", className);
+                    continue;
+                }
 
-            String packageName = className.replace(".", FOLDER_SPLIT);
+                String packageName = className.replace(".", FOLDER_SPLIT);
 
-            if (!StringUtils.hasText(group)) {
-                group = "NULL_GROUP";
-            }
-            packageName = group + FOLDER_SPLIT + packageName;
+                if (!StringUtils.hasText(group)) {
+                    group = "NULL_GROUP";
+                }
+                packageName = group + FOLDER_SPLIT + packageName;
 
-            if (StringUtils.hasText(version))
-                packageName = packageName + ":" + version;
+                if (StringUtils.hasText(version))
+                    packageName = packageName + ":" + version;
 
-            this.addPackageNode(apidocsNode, packageName, StringUtils.hasText(group));
+                this.addPackageNode(apidocsNode, packageName, StringUtils.hasText(group));
 
-            JSONTreeNode classNode = this.findChildByText(apidocsNode, packageName);
+                JSONTreeNode classNode = this.findChildByText(apidocsNode, packageName);
 
-            if (null != classNode) {
-                this.addMethodNode(classNode, url.getParameter("methods").split(","), serviceKey);
+                if (null != classNode) {
+                    this.addMethodNode(classNode, url.getParameter("methods").split(","), serviceKey);
+                }
             }
 
         }

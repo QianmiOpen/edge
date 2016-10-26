@@ -70,7 +70,8 @@ DocPanel = Ext.extend(Ext.Panel, {
             border : false,
             defaults : {
                 // 应用于每个被包含的项 applied to each contained item
-                width : 370,
+                // width : 370,
+                anchor : '90%',
                 msgTarget : 'side'
             },
             layoutConfig : {
@@ -91,8 +92,8 @@ DocPanel = Ext.extend(Ext.Panel, {
                 mode : 'local', // 数据模式, local为本地模式, 如果不设置,就显示不停的加载中...
                 readOnly : true, // 是否只读
                 triggerAction : 'all', // 显示所有下列数.必须指定为'all'
-                // width:330,
-                anchor : '90%',
+                // width:370,
+                // anchor : '90%',
                 emptyText : '', // 没有默认值时,显示的字符串
                 store : new Ext.data.SimpleStore({ // 填充的数据
                     fields : [ 'text', 'value' ],
@@ -192,7 +193,8 @@ DocPanel = Ext.extend(Ext.Panel, {
                 bodyStyle : 'padding:25px',
                 defaults : {
                     // 应用于每个被包含的项 applied to each contained item
-                    width : 370,
+                    // width : 370,
+                    anchor : '98%',
                     msgTarget : 'side'
                 },
                 layoutConfig : {
@@ -264,7 +266,7 @@ Ext.extend(MainPanel, Ext.TabPanel, {
                 },
                 success : function(response, options) {
                     var o = Ext.util.JSON.decode(response.responseText);
-                    var defParam = "";;
+                    var defParam = "";
                     try{
                         // Json 格式化
                         defParam = o.paramDesc ? js_beautify(o.paramDesc, 4, ' ') : "";
@@ -321,6 +323,17 @@ Ext.onReady(function() {
             }
             mainPanel.loadClass(node);
         }
+    });
+
+    function openSingleChildNode(node){
+        if(node.childNodes && node.childNodes.length == 1){
+            node.childNodes[0].expand();
+            openSingleChildNode(node.childNodes[0]);
+        }
+    }
+
+    api.on('expandnode', function (node) {
+        openSingleChildNode(node);
     });
     
     mainPanel.on('tabchange', function(tp, tab) {
@@ -398,19 +411,21 @@ Ext.onReady(function() {
         }
         api.expandAll();
         
-        var re = new RegExp('^' + Ext.escapeRe(text), 'i');
+        // var re = new RegExp('^' + Ext.escapeRe(text), 'i');
         filter.filterBy(function(n) {
-            return !n.attributes.isClass || re.test(n.text);
+            return (!n.attributes.isClass) || (n.attributes.fullText && n.attributes.fullText.toLowerCase().indexOf(text.toLowerCase()) >= 0);
         });
-        
+
         // hide empty packages that weren't filtered
         hiddenPkgs = [];
-        api.root.cascade(function(n) {
-            if (!n.attributes.isClass && n.ui.ctNode && n.ui.ctNode.offsetHeight < 3) {
-                n.ui.hide();
-                hiddenPkgs.push(n);
-            }
-        });
+        for (var i = 0; i < 10; i++) {
+            api.root.cascade(function (n) {
+                if (!n.attributes.isClass && n.ui.ctNode && n.ui.ctNode.offsetHeight < 3) {
+                    n.ui.hide();
+                    hiddenPkgs.push(n);
+                }
+            });
+        }
     }
     
 });

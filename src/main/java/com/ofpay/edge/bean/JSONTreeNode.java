@@ -9,9 +9,9 @@ package com.ofpay.edge.bean;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import org.springframework.util.StringUtils;
 
 /**
  * <p>
@@ -21,7 +21,7 @@ import org.springframework.util.StringUtils;
  * @version 1.0, 2010-10-19
  * @since 1.0
  */
-public class JSONTreeNode implements Serializable {
+public class JSONTreeNode implements Serializable, Comparable<JSONTreeNode> {
     /**
      * Content of note
      */
@@ -276,6 +276,9 @@ public class JSONTreeNode implements Serializable {
      * @return the children
      */
     public List<JSONTreeNode> getChildren() {
+        if (children != null) {
+            Collections.sort(children);
+        }
         return children;
     }
 
@@ -362,4 +365,8 @@ public class JSONTreeNode implements Serializable {
         this.fullText = fullText;
     }
 
+    @Override
+    public int compareTo(JSONTreeNode node) {
+        return this.getText().compareTo(node.getText());
+    }
 }
