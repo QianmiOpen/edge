@@ -160,7 +160,15 @@ DocPanel = Ext.extend(Ext.Panel, {
                             resultArea.setValue(result);
                         },
                         failure : function(form, action) {
-                            Ext.Msg.alert('提示', '原因如下：' + action.result.errors.info);
+                            var result;
+                            try{
+                                // Json 格式化
+                                result = js_beautify(action.result.msg, 4, ' ');
+                            } catch(err) {
+                                result = action.result.msg;
+                            }
+                            resultArea.setValue(result);
+                            // Ext.Msg.alert('提示', '原因如下：' + action.result.errors.info);
                         }
                     });
                 }

@@ -3,21 +3,19 @@
  */
 package com.ofpay.edge;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONException;
+import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.util.List;
 
-import com.alibaba.fastjson.parser.ParserConfig;
-import com.alibaba.fastjson.util.TypeUtils;
-import org.apache.commons.beanutils.ConvertUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.serializer.SerializerFeature;
 
 /**
  * <p>
@@ -31,19 +29,21 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 public class InterfaceExecutor {
     private static Logger log = LoggerFactory.getLogger(InterfaceExecutor.class);
 
+    private static ObjectMapper objectMapper = new ObjectMapper();
+
     /**
      * 接口执行方法
      * @param target Service Bean对象
      * @param method Service Method
-     * @param inputParamArray 方法入参信息，采用Json描述
+     * @param json 方法入参信息，采用Json描述
      * @return 调用结果
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static String execute(Object target, Method method, JSONArray inputParamArray) throws Exception {
+    public static String execute(Object target, Method method, String json) throws Exception {
         Object result;
 
         try {
-            Object[] params = convertParams(inputParamArray, method.getParameterTypes());
+            Object[] params = convertParams(json, method.getParameterTypes());
             result = method.invoke(target, params);
         } catch (IllegalArgumentException e) {
             result = e.getMessage();
@@ -56,17 +56,23 @@ public class InterfaceExecutor {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static Object[] convertParams(JSONArray inputParamArray, Class<?>[] paramTypes) throws Exception {
+    public static Object[] convertParams(String json, Class<?>[] paramTypes) throws Exception {
         Object[] paramArr;
 
-        if (inputParamArray == null) {
+        if (json == null || json.length() == 0) {
             paramArr = new Object[] {};
         } else {
-            paramArr = inputParamArray.toArray();
+            try {
+                List inputParamList = objectMapper.readValue(json, List.class);
+                paramArr = inputParamList.toArray();
+            } catch (Exception ex) {
+                log.warn("解析异常参数失败，json:{}", json, ex);
+                throw new JSONException("解析异常参数失败，json: " + json);
+            }
         }
 
         if (paramTypes.length != paramArr.length) {
-            log.warn("参数值与参数类型个数不匹配, paramList:{}", new Object[] { inputParamArray });
+            log.warn("参数值与参数类型个数不匹配, json:{}", json);
             throw new IllegalArgumentException("参数错误，传入的参数个数与接口不匹配");
         }
 
@@ -76,7 +82,9 @@ public class InterfaceExecutor {
             Object param = paramArr[i];
             Class<?> paramType = paramTypes[i];
 
-            params[i] = TypeUtils.cast(param, paramType, ParserConfig.getGlobalInstance());
+            params[i] = objectMapper.readValue(objectMapper.writeValueAsString(param), paramType);
+
+//            params[i] = TypeUtils.cast(param, paramType, ParserConfig.getGlobalInstance());
 //            if (InterfaceLoader.isWrapClass(paramType)) {
 //                params[i] = ConvertUtils.convert(param, paramType);
 //            } else if (paramType.isEnum()) {
@@ -109,7 +117,6 @@ public class InterfaceExecutor {
     /**
      * 将Throwable转换为字符串描述的堆栈信息
      * @param throwable 异常信息
-     * @return
      */
     public static String getStackTrace(Throwable throwable) {
         final Writer result = new StringWriter();

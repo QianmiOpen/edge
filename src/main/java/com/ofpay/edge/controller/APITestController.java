@@ -217,6 +217,7 @@ public class APITestController {
             @RequestParam(required = false) String serviceUrl) {
 
         Map<String, Object> result = new HashMap<String, Object>();
+        result.put("success", false);
 
         String msg = "";
         String arr[] = methodName.split("@");
@@ -232,24 +233,26 @@ public class APITestController {
                 if (serviceMethod == null) {
                     msg = "找不到服务Method";
                 } else {
-                    msg = InterfaceExecutor.execute(serviceBean, serviceMethod, JSON.parseArray(params));
+                    msg = InterfaceExecutor.execute(serviceBean, serviceMethod, params);
+                    result.put("success", true);
                 }
             }
 
         } catch (JSONException e) {
-            msg = "参数格式错误;";
+            msg = "参数格式错误;" + InterfaceExecutor.getStackTrace(e);
         } catch (InvocationTargetException e){
             msg = "InvocationTargetException:" + InterfaceExecutor.getStackTrace(e.getTargetException());
 
             if(e.getTargetException() instanceof RpcException){
                 //RPC异常时，清除缓存的ReferenceConfig对象
                 InterfaceLoader.destroyReference(serviceKey, serviceUrl);
+            }else {
+                result.put("success", true);
             }
         } catch (Exception e) {
             msg = "调用接口异常;" + InterfaceExecutor.getStackTrace(e);
         }
 
-        result.put("success", true);
         result.put("msg", msg);
 
         String json = JSON.toJSONString(result);
