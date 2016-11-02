@@ -94,6 +94,7 @@ public class InterfaceLoader {
             reference.setRegistry(registry); // 多个注册中心可以用setRegistries()
             reference.setCheck(false);
             reference.setInterface(url.getPath());
+            reference.setTimeout(30*1000);
             if (StringUtils.hasText(serviceUrl)) {
                 reference.setUrl(serviceUrl); // 指定调用服务
             }
