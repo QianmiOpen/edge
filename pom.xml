@@ -3,7 +3,7 @@
 
     <groupId>com.qianmi</groupId>
     <artifactId>edge</artifactId>
-    <version>1.0.0-RELEASE</version>
+    <version>1.0.1-SNAPSHOT</version>
 
     <name>Edge</name>
     <description> Dubbo Visualized Testing Tool</description>
@@ -149,7 +149,7 @@
     </build>
 
     <scm>
-        <tag>edge-1.0.0-RELEASE</tag>
+        <tag>master</tag>
         <connection>scm:git:git@github.com:QianmiOpen/edge.git</connection>
         <developerConnection>scm:git:git@github.com:QianmiOpen/edge.git</developerConnection>
         <url>git@github.com:QianmiOpen/edge.git</url>
