@@ -6,6 +6,10 @@
     <artifactId>edge</artifactId>
     <version>1.0.0-beta-2-SNAPSHOT</version>
 
+    <name>Edge</name>
+    <description> Dubbo Visualized Testing Tool</description>
+    <url>https://github.com/QianmiOpen/edge</url>
+
     <packaging>war</packaging>
 
     <properties>
