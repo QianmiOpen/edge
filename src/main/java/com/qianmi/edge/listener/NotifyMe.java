@@ -1,4 +1,4 @@
-package com.ofpay.edge.listener;
+package com.qianmi.edge.listener;
 
 import java.util.HashMap;
 import java.util.List;
@@ -8,6 +8,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
+import com.qianmi.edge.InterfaceLoader;
+import com.qianmi.edge.util.Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -24,8 +26,6 @@ import com.alibaba.dubbo.config.ApplicationConfig;
 import com.alibaba.dubbo.config.RegistryConfig;
 import com.alibaba.dubbo.registry.NotifyListener;
 import com.alibaba.dubbo.registry.RegistryService;
-import com.ofpay.edge.InterfaceLoader;
-import com.ofpay.edge.util.Tool;
 
 /**
  * Created with IntelliJ IDEA.

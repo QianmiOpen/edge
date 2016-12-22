@@ -12,7 +12,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Alibaba.com.
  */
-package com.ofpay.edge.util;
+package com.qianmi.edge.util;
 
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.common.utils.NetUtils;

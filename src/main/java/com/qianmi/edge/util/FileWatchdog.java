@@ -1,7 +1,7 @@
 /**
  * FileWatchdog.java
  */
-package com.ofpay.edge.util;
+package com.qianmi.edge.util;
 
 import java.io.File;
 import java.util.*;

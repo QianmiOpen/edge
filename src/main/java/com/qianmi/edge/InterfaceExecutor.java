@@ -1,7 +1,7 @@
 /**
  * InterfaceExecutor.java
  */
-package com.ofpay.edge;
+package com.qianmi.edge;
 
 import com.alibaba.fastjson.JSONException;
 import com.fasterxml.jackson.databind.ObjectMapper;

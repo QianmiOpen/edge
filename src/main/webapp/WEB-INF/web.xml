@@ -55,7 +55,7 @@
         <param-value>60</param-value>
     </context-param>
     <listener>
-        <listener-class>com.ofpay.edge.listener.StartupListener</listener-class>
+        <listener-class>com.qianmi.edge.listener.StartupListener</listener-class>
     </listener>
     
     <session-config>

@@ -16,8 +16,8 @@
     <root level="WARN">
         <appender-ref ref="STDOUT" />
     </root>
-    <logger name="com.ofpay" level="WARN" />
-    <logger name="com.ofpay.edge.util.ClassLoaderUtil" level="DEBUG" />
+    <logger name="com.qianmi" level="WARN" />
+    <logger name="com.qianmi.edge.util.ClassLoaderUtil" level="DEBUG" />
     <logger name="org.springframework" level="WARN" />
     <logger name="com.alibaba.dubbo" level="ERROR" />
 </configuration>

@@ -1,7 +1,7 @@
 /**
  * InterfaceLoader.java
  */
-package com.ofpay.edge;
+package com.qianmi.edge;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -20,7 +20,7 @@ import com.alibaba.dubbo.config.ReferenceConfig;
 import com.alibaba.dubbo.config.RegistryConfig;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.ofpay.edge.listener.NotifyMe;
+import com.qianmi.edge.listener.NotifyMe;
 
 /**
  * <p>

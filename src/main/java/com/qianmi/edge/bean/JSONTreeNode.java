@@ -5,7 +5,7 @@
  * Reviser: aqlu
  * Revising Date: 2010-10-19
  */
-package com.ofpay.edge.bean;
+package com.qianmi.edge.bean;
 
 import java.io.Serializable;
 import java.util.ArrayList;

@@ -8,9 +8,9 @@
         ">
     <dubbo:reference id="registryService"  registry="default-dubbo-registry" interface="com.alibaba.dubbo.registry.RegistryService" check="false" />
         
-    <bean id="NotifyMe" class="com.ofpay.edge.listener.NotifyMe">
-        <property name="registryService" ref="registryService"></property>
-        <property name="urlFilterRegex" value="${interface.urlFilterRegex}"></property>
+    <bean id="NotifyMe" class="com.qianmi.edge.listener.NotifyMe">
+        <property name="registryService" ref="registryService" />
+        <property name="urlFilterRegex" value="${interface.urlFilterRegex}" />
         <property name="subcribeParams">
             <map>
                 <entry key="interface" value="*" />

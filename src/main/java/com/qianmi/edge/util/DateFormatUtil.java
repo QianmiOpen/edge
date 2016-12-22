@@ -1,4 +1,4 @@
-package com.ofpay.edge.util;
+package com.qianmi.edge.util;
 
 
 import org.apache.commons.lang.StringUtils;

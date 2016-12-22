@@ -19,7 +19,7 @@
  * Note: originally released under the GNU LGPL v2.1, 
  * but rereleased by the original author under the ASF license (above).
  */
-package com.ofpay.edge.util;
+package com.qianmi.edge.util;
 
 /**
  * <p>A hash map that uses primitive ints for the key rather than objects.</p>
